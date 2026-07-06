@@ -5,15 +5,13 @@ import os
 import datetime
 import requests
 
-# --- PAGE CONFIGURATION (MUST BE ABSOLUTE FIRST) ---
+# --- BROWSER CONFIGURATION ---
 st.set_page_config(page_title="EcoAudit AI", page_icon="🌿", layout="wide")
 
-# --- DATABASE ENGINE & SHEET PERSISTENCE STORAGE MATRIX ---
 DB_FILE = "users_database.csv"
 MARKETPLACE_FILE = "marketplace_database.csv"
 
 def hash_password(password):
-    """Securely scramble a plain-text password using SHA-256 matrix."""
     return hashlib.sha256(password.encode()).hexdigest()
 
 def load_users_db():
@@ -39,10 +37,10 @@ def load_users_db():
     return df.set_index("email").to_dict(orient="index")
 
 def save_user_to_db(email, data_dict):
-    """Saves the user payload directly since it is already securely hashed."""
+    # Saves the payload directly since it's already hashed in the signup form step
     df_new = pd.DataFrame([{
         "email": email,
-        "password": data_dict["password"],  # FIX: Removed the second hash_password wrapper
+        "password": data_dict["password"],
         "company_name": data_dict["company_name"],
         "location": data_dict["location"],
         "role": data_dict["role"],
@@ -81,7 +79,7 @@ def save_listing_to_db(listing_dict):
         df_new.to_csv(MARKETPLACE_FILE, index=False)
 
 
-# --- FIXED GLOBAL SYSTEM STATE BOOTSTRAP MATRIX ---
+# --- SYSTEM MEMORY STARTUP MATRIX ---
 if "db_initialized" not in st.session_state:
     st.session_state.users_db = load_users_db()
     st.session_state.marketplace_db = load_marketplace_db()
@@ -95,14 +93,14 @@ if "db_initialized" not in st.session_state:
     st.session_state.sidebar_open = True
     st.session_state.private_chats = {}
     
-    # CRITICAL FIX: Initialize input clearing memory states right at global app bootup
+    # Text states for automatic box clearing
     st.session_state.input_raw_log = ""
-    st.session_state.input_material = "Copper Materials Component"
+    st.session_state.input_material = ""
     st.session_state.input_quantity = ""
     
     st.session_state.db_initialized = True
 
-# --- ENFORCED DARK MODE STYLING ARCHITECTURE ---
+# --- CLEAN DARK MODE STYLING ---
 st.markdown("""
     <style>
     html, body, .stApp {
@@ -162,7 +160,7 @@ st.markdown("""
 
 
 # ==========================================
-# PHASE 1: PUBLIC LANDING GATEWAY PAGE
+# PHASE 1: PUBLIC LANDING PAGE
 # ==========================================
 if not st.session_state.started and not st.session_state.logged_in:
     col_header_left, col_btn_in, col_btn_up = st.columns([3.8, 0.8, 0.8])
@@ -189,10 +187,9 @@ if not st.session_state.started and not st.session_state.logged_in:
     with col_mid_content:
         st.markdown("""
             <div class='eco-card'>
-                <h2 style='text-align: center; font-weight: 700; color: #FFFFFF; margin-bottom: 15px;'>Saving Nature Through Autonomous Circular Supply Chains</h2>
+                <h2 style='text-align: center; font-weight: 700; color: #FFFFFF; margin-bottom: 15px;'>Automated Circular Supply Chains for Industry</h2>
                 <p style='text-align: center; font-size: 1.15rem; color: #94A3B8; line-height: 1.6;'>
-                    Instantly turning unstructured industrial warehouse logs into live B2B green 
-                    matchmaking pipelines and automated carbon ledger transactions.
+                    Instantly turn factory warehouse logs into live market listings and connect with local recycling buyers.
                 </p>
             </div>
         """, unsafe_allow_html=True)
@@ -208,30 +205,30 @@ if not st.session_state.started and not st.session_state.logged_in:
     st.markdown("<br><br><br>", unsafe_allow_html=True)
     st.write("---")
     
-    st.markdown("<h3 style='color: #F8FAFC; font-weight:600;'>Enterprise Capabilities</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='color: #F8FAFC; font-weight:600;'>Platform Features</h3>", unsafe_allow_html=True)
     f1, f2, f3 = st.columns(3)
     with f1:
-        st.markdown("<div class='eco-card'><h4>AI Manifest Auditing</h4><p style='color: #94A3B8; font-size: 0.95rem;'>Instantly process unstructured warehouse text logs, plant inventory metrics, and byproduct sheets without formatting barriers.</p></div>", unsafe_allow_html=True)
+        st.markdown("<div class='eco-card'><h4>Log Reading AI</h4><p style='color: #94A3B8; font-size: 0.95rem;'>Paste raw warehouse texts or notes directly without manual sorting.</p></div>", unsafe_allow_html=True)
     with f2:
-        st.markdown("<div class='eco-card'><h4>B2B Green Matchmaking</h4><p style='color: #94A3B8; font-size: 0.95rem;'>Autonomous matching loops optimize and direct material outflows out to local verified processing corridors automatically.</p></div>", unsafe_allow_html=True)
+        st.markdown("<div class='eco-card'><h4>B2B Green Matching</h4><p style='color: #94A3B8; font-size: 0.95rem;'>Connect industrial sellers immediately with local recycling hubs.</p></div>", unsafe_allow_html=True)
     with f3:
-        st.markdown("<div class='eco-card'><h4>End-to-End Compliance</h4><p style='color: #94A3B8; font-size: 0.95rem;'>Creates private cryptographic ledger tracks, verifies facility authorization certificates, and updates carbon footprints.</p></div>", unsafe_allow_html=True)
+        st.markdown("<div class='eco-card'><h4>Secure Messaging</h4><p style='color: #94A3B8; font-size: 0.95rem;'>Lock your contract and business discussions into private chat rooms.</p></div>", unsafe_allow_html=True)
 
 
 # ==========================================
-# PHASE 2: REGISTRATION & SIGN IN REGISTRY
+# PHASE 2: SIGN IN & REGISTER
 # ==========================================
 elif st.session_state.started and not st.session_state.logged_in:
     st.session_state.users_db = load_users_db()
 
     col_nav_left, col_nav_right = st.columns([3, 1.2])
     with col_nav_left:
-        if st.button("Back to Platform Overview"):
+        if st.button("Back to Homepage"):
             st.session_state.started = False
             st.session_state.selected_role = None
             st.rerun()
     with col_nav_right:
-        choice = st.segmented_control("Action Portal Mode:", ["Sign In", "Sign Up"], default=st.session_state.auth_action)
+        choice = st.segmented_control("Choose Action:", ["Sign In", "Sign Up"], default=st.session_state.auth_action)
         if choice:
             st.session_state.auth_action = choice
 
@@ -240,66 +237,67 @@ elif st.session_state.started and not st.session_state.logged_in:
     email, password, company_name, location, industry_type, license_no, capacity = "", "", "", "", "", "", ""
 
     if st.session_state.auth_action == "Sign In":
-        st.markdown("<h2>Secure Portal Gateway (Sign In)</h2>", unsafe_allow_html=True)
+        st.markdown("<h2>Sign In to Your Dashboard</h2>", unsafe_allow_html=True)
         col_login, _ = st.columns([1.2, 1])
         with col_login:
-            email = st.text_input("Enterprise Email Credentials", placeholder="manager@company.com", key="signin_email")
-            password = st.text_input("Secure Password Matrix", type="password", placeholder="••••••••", key="signin_pass")
+            email = st.text_input("Email Address", placeholder="name@company.com", key="signin_email")
+            password = st.text_input("Password", type="password", placeholder="••••••••", key="signin_pass")
             
-            if st.button("Authorize & Open Console", type="primary", use_container_width=True):
+            if st.button("Login", type="primary", use_container_width=True):
                 if email.strip() in st.session_state.users_db:
                     db_entry = st.session_state.users_db[email.strip()]
                     if str(db_entry["password"]) == hash_password(password.strip()):
                         st.session_state.logged_in = True
                         st.session_state.current_user = email.strip()
                         st.session_state.current_role = db_entry["role"]
-                        st.toast("Access authenticated successfully.")
+                        st.toast("Logged in successfully!")
                         st.rerun()
                     else:
-                        st.error("Invalid security key validation mismatch sequence.")
+                        st.error("Incorrect password. Please try again.")
                 else:
-                    st.error("Identity Vector not found inside tracking sheet databases.")
+                    st.error("Email address not found. Please Sign Up first.")
     else:
         if st.session_state.selected_role is None:
-            st.markdown("<h2 style='color: #FFFFFF; font-weight:700;'>Corporate Registration (Sign Up)</h2>", unsafe_allow_html=True)
+            st.markdown("<h2 style='color: #FFFFFF; font-weight:700;'>Create a Free Account</h2>", unsafe_allow_html=True)
             col_role1, col_role2 = st.columns(2, gap="large")
             with col_role1:
-                st.markdown("<div class='eco-card' style='height: 190px;'><h3 style='color: #4ADE80;'>Industrial Material Seller</h3><p style='color: #94A3B8;'>You manage a manufacturing plant layout looking to log, route, and dispatch raw processing remnants.</p></div>", unsafe_allow_html=True)
-                if st.button("Proceed as Industrial Seller", type="primary", use_container_width=True):
+                st.markdown("<div class='eco-card' style='height: 190px;'><h3 style='color: #4ADE80;'>Industrial Seller</h3><p style='color: #94A3B8;'>Choose this if you run a factory or warehouse looking to clear materials.</p></div>", unsafe_allow_html=True)
+                if st.button("Register as Material Seller", type="primary", use_container_width=True):
                     st.session_state.selected_role = "Industrial Seller (Factory / Plant)"
                     st.rerun()
             with col_role2:
-                st.markdown("<div class='eco-card' style='height: 190px;'><h3 style='color: #4ADE80;'>Verified B2B Waste Buyer</h3><p style='color: #94A3B8;'>You manage certified processing hubs or recycling compounding operations seeking feedstock flows.</p></div>", unsafe_allow_html=True)
-                if st.button("Proceed as Verified Buyer", type="primary", use_container_width=True):
+                st.markdown("<div class='eco-card' style='height: 190px;'><h3 style='color: #4ADE80;'>Verified B2B Buyer</h3><p style='color: #94A3B8;'>Choose this if you are a certified recycler or processing plant looking for materials.</p></div>", unsafe_allow_html=True)
+                if st.button("Register as Recycling Buyer", type="primary", use_container_width=True):
                     st.session_state.selected_role = "Verified B2B Buyer (Recycling Facility)"
                     st.rerun()
         else:
-            st.markdown(f"## Profile Setup: <span style='color: #4ADE80;'>{st.session_state.selected_role}</span>", unsafe_allow_html=True)
-            if st.button("Switch Operational Role Profile"):
+            st.markdown(f"## Fill Details: <span style='color: #4ADE80;'>{st.session_state.selected_role}</span>", unsafe_allow_html=True)
+            if st.button("Change Account Type"):
                 st.session_state.selected_role = None
                 st.rerun()
                 
             col_form, _ = st.columns([1.5, 1])
             with col_form:
-                email = st.text_input("Enterprise Email Credentials", placeholder="corporate@company.com", key="signup_email")
-                password = st.text_input("Secure Password Matrix", type="password", placeholder="••••••••", key="signup_pass")
+                email = st.text_input("Company Email Address", placeholder="name@company.com", key="signup_email")
+                password = st.text_input("Create Password", type="password", placeholder="••••••••", key="signup_pass")
                 st.write("---")
-                st.markdown("#### Mandated Profile Specifications")
+                st.markdown("#### Company Information")
                 
                 if st.session_state.selected_role == "Industrial Seller (Factory / Plant)":
-                    company_name = st.text_input("Manufacturing Facility Corporate Name")
-                    location = st.text_input("Plant Physical Address")
-                    industry_type = st.text_input("Primary Material Domain")
+                    company_name = st.text_input("Factory / Company Name")
+                    location = st.text_input("Plant Physical Location (City)")
+                    industry_type = st.text_input("Main Material Type (e.g., Copper Works)")
                     license_no, capacity = "N/A", "N/A"
                 else:
-                    company_name = st.text_input("Recycling Plant Registered Name")
-                    location = st.text_input("Processing Hub Physical Address")
-                    license_no = st.text_input("Pollution Control Board License #")
-                    capacity = st.text_input("Monthly Material Reclamation Capacity")
+                    company_name = st.text_input("Recycling Center Name")
+                    location = st.text_input("Facility Physical Location (City)")
+                    license_no = st.text_input("Pollution Control Board License Number")
+                    capacity = st.text_input("Monthly Recycling Capacity (e.g., 50 Tons)")
                     industry_type = "N/A"
 
-                if st.button("Commit Account & Register", type="primary", use_container_width=True):
+                if st.button("Complete Registration", type="primary", use_container_width=True):
                     if email.strip() and password.strip() and company_name.strip():
+                        # Hash password exactly ONCE during registry setup
                         user_payload = {
                             "password": hash_password(password.strip()),
                             "company_name": company_name.strip(),
@@ -311,21 +309,16 @@ elif st.session_state.started and not st.session_state.logged_in:
                         save_user_to_db(email.strip(), user_payload)
                         st.session_state.users_db[email.strip()] = user_payload
                         
-                        try:
-                            requests.post("https://ecoaudit-ai.app.n8n.cloud/webhook-test/user-onboarding", json={"email": email.strip(), "company_name": company_name.strip(), "role": st.session_state.selected_role}, timeout=5)
-                        except Exception:
-                            pass
-                        
                         st.session_state.logged_in = True
                         st.session_state.current_user = email.strip()
                         st.session_state.current_role = st.session_state.selected_role
                         st.rerun()
                     else:
-                        st.error("Please fill out all credentials and tracking rows to complete registration.")
+                        st.error("Please fill out all input fields to finish your registration.")
 
 
 # ==========================================
-# PHASE 3: INTERACTIVE ENTERPRISE WORKSPACE
+# PHASE 3: THE MAIN LOGGED IN APP INTERFACE
 # ==========================================
 else:
     user_meta = st.session_state.users_db[st.session_state.current_user]
@@ -336,24 +329,23 @@ else:
     else:
         options.insert(1, "🛒 Open Procurement (Buy)")
 
-    # 🧾 GEMINI-STYLE COLLAPSIBLE SIDE NAVIGATION LOGIC
+    # COLLAPSIBLE SIDE NAVIGATION MENU
     if st.session_state.sidebar_open:
         col_side, col_main = st.columns([1.2, 4], gap="medium")
         with col_side:
             col_brand, col_close_icon = st.columns([4, 1])
             with col_brand:
                 st.markdown(f"<h3 style='margin:0; color:#4ADE80; font-weight:700;'>Console</h3>", unsafe_allow_html=True)
-                st.caption(f"Node: {user_meta['company_name']}")
+                st.caption(f"Logged in as: {user_meta['company_name']}")
             with col_close_icon:
-                if st.button("📁", key="close_panel_btn", help="Collapse panel container", use_container_width=True):
+                if st.button("📁", key="close_panel_btn", use_container_width=True):
                     st.session_state.sidebar_open = False
                     st.rerun()
             st.write("---")
-            st.session_state.current_tab = st.radio("System Modules:", options, index=options.index(st.session_state.current_tab) if st.session_state.current_tab in options else 0, label_visibility="collapsed")
+            st.session_state.current_tab = st.radio("Navigation Menu:", options, index=options.index(st.session_state.current_tab) if st.session_state.current_tab in options else 0, label_visibility="collapsed")
             st.write("<br><br>" * 4, unsafe_allow_html=True)
             st.write("---")
             if st.button("Logout", use_container_width=True, key="side_logout_btn"):
-                # Clean exit parameters
                 st.session_state.logged_in = False
                 st.session_state.started = False
                 st.session_state.selected_role = None
@@ -362,22 +354,21 @@ else:
                 st.rerun()
     else:
         col_main = st.container()
-        st.markdown("<style>div.element-container button[key='open_panel_btn'] { background: rgba(255, 255, 255, 0.05) !important; border: 1px solid rgba(255, 255, 255, 0.15) !important; padding: 6px 16px !important; font-size: 20px !important; min-width: 60px !important; height: auto !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; }</style>", unsafe_allow_html=True)
         st.write("")
         col_open_icon, _ = st.columns([1, 20])
         with col_open_icon:
-            if st.button("📂", key="open_panel_btn", help="Expand console navigation menu"):
+            if st.button("📂", key="open_panel_btn"):
                 st.session_state.sidebar_open = True
                 st.rerun()
         st.write("")
 
-    # 🖥️ CORE OPERATIONS MANAGEMENT TERMINAL CONTAINER
+    # CORE OPERATION DASHBOARDS
     with col_main:
-        # 📊 TAB ONE: EXECUTIVE ANALYTICS DASHBOARD
+        # TAB ONE: ANALYTICS DASHBOARD
         if st.session_state.current_tab == "📊 Dashboard":
-            st.title("Executive Circular Analytics")
+            st.title("Executive Dashboard Overview")
             
-            # Dynamic Live Math Calculus Calculations
+            # Real-time counter logic
             total_active_nodes = len(st.session_state.users_db)
             total_diverted_kg = 0.0
             for item in st.session_state.marketplace_db:
@@ -393,55 +384,72 @@ else:
             formatted_weight = f"{int(total_diverted_kg):,}" if total_diverted_kg > 0 else "0"
 
             m1, m2, m3 = st.columns(3)
-            m1.metric("Nature Footprint Diverted", f"{formatted_weight} kg", "Tracking Real-Time")
-            m2.metric("Active B2B Procurement Nodes", str(total_active_nodes), "Verified Entities")
-            m3.metric("Orchestrated Pipeline Latency", "1.4s", "99.8% Optimization")
+            m1.metric("Total Material Recycled", f"{formatted_weight} kg", "Tracking Live")
+            m2.metric("Connected Companies Online", str(total_active_nodes), "Verified Accounts")
+            m3.metric("System Route Latency", "1.4s", "Optimized Network")
             
             st.write("---")
             c_left, c_right = st.columns([1.3, 1])
             with c_left:
-                st.markdown("### Live Circular Material Feed")
+                st.markdown("### 📋 Active Market Listings")
                 if not st.session_state.marketplace_db:
-                    st.write("*No active byproduct streams listed inside network loops.*")
+                    st.write("*No active byproduct batches listed on the network currently.*")
                 else:
                     for listing in st.session_state.marketplace_db:
                         st.markdown(f"""
                             <div class='eco-card'>
                                 <h4 style='color: #4ADE80; margin:0;'>📦 {listing['material_type']} ({listing['quantity']})</h4>
                                 <p style='color: #E2E8F0; margin-top:5px;'><em>"{listing['raw_text']}"</em></p>
-                                <small style='color: #64748B;'>Origin Plant Node: {listing['sender_company']} | Timestamp log: {listing['timestamp']}</small>
+                                <small style='color: #64748B;'>Posted by: {listing['sender_company']} | Date: {listing['timestamp']}</small>
                             </div>
                         """, unsafe_allow_html=True)
                         
             with c_right:
-                st.markdown("### Global Platform Directory")
-                has_other_buyers = False
+                st.markdown("### 🌐 Global Company Directory")
+                # FIX 3: RE-ENGINEERED DIRECT MESSAGING FROM DIRECTORY
+                has_other_companies = False
                 for user_email, profile in st.session_state.users_db.items():
-                    if "Buyer" in str(profile.get("role", "")) and user_email != st.session_state.current_user:
-                        has_other_buyers = True
+                    if user_email != st.session_state.current_user:
+                        has_other_companies = True
                         st.markdown(f"""
                             <div style='background: rgba(255,255,255,0.04); padding: 15px; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid #60A5FA;'>
                                 <strong style='color: #F8FAFC;'>{profile['company_name']}</strong><br>
-                                <small style='color: #94A3B8;'>Role: {profile['role']} | physical Hub Base: {profile['location']}</small>
+                                <small style='color: #94A3B8;'>Type: {profile['role']} | Location: {profile['location']}</small>
                             </div>
                         """, unsafe_allow_html=True)
-                if not has_other_buyers:
-                    st.write("*No active external buyer nodes available in database registries.*")
+                        
+                        # Clickable button interface to instantly start a peer-to-peer chat
+                        if st.button(f"Connect & Message {profile['company_name']}", key=f"connect_{user_email[:5]}"):
+                            chat_channel_id = f"DIRECT__{hashlib.md5((st.session_state.current_user + user_email).encode()).hexdigest()}"
+                            if chat_channel_id not in st.session_state.private_chats:
+                                st.session_state.private_chats[chat_channel_id] = [
+                                    {
+                                        "role": "assistant",
+                                        "sender_name": "System Security",
+                                        "msg": f"Private chat room initialized with {profile['company_name']}."
+                                    }
+                                ]
+                            st.toast("Secure message line opened!")
+                            st.session_state.current_tab = "💬 Communication Terminal"
+                            st.rerun()
+                if not has_other_companies:
+                    st.write("*No other active companies are registered on the database yet.*")
 
-        # 🚀 TAB TWO: MATERIALS DISPATCH CONTROLLER (SELLER VIEW)
+        # TAB TWO: SELLER LAUNCHPAD
         elif st.session_state.current_tab == "🚀 Dispatch Byproduct (Sell)":
-            st.title("Autonomous Pipeline Dispatch")
+            st.title("🚀 Post New Byproduct Material")
             st.write("---")
             
-            # Layout state fields safely referenced from the global state dictionary
-            raw_log = st.text_area("Paste Raw Warehouse Manifest / Plant Chat Log:", value=st.session_state.input_raw_log, placeholder="Paste unstructured manifest data string payloads here...", key="text_raw_log")
-            material_type = st.text_input("Material Category Mapping", value=st.session_state.input_material, key="text_material")
-            quantity = st.text_input("Estimated Weight/Volume (Always specify 'kg' or 'tons')", value=st.session_state.input_quantity, key="text_quantity")
+            # Simple UI boxes with clearing mechanisms
+            raw_log = st.text_area("Paste Raw Warehouse Log / Factory Notes:", value=st.session_state.input_raw_log, placeholder="Type or paste material details here...", key="text_raw_log")
+            material_type = st.text_input("Material Category Mapping", value=st.session_state.input_material, placeholder="e.g., Copper Cable Wire Scrap", key="text_material")
+            quantity = st.text_input("Total Weight / Volume (Specify 'kg' or 'tons')", value=st.session_state.input_quantity, placeholder="e.g., 450 kg", key="text_quantity")
             
-            if st.button("Trigger Autonomous Matching Pipeline", type="primary", use_container_width=True):
+            if st.button("Post Listing to Market", type="primary", use_container_width=True):
                 if raw_log.strip() and quantity.strip():
+                    new_id = f"LOT-{int(datetime.datetime.now().timestamp())}"
                     new_listing = {
-                        "id": f"LOT-{int(datetime.datetime.now().timestamp())}",
+                        "id": new_id,
                         "sender_email": st.session_state.current_user,
                         "sender_company": user_meta["company_name"],
                         "raw_text": raw_log,
@@ -452,58 +460,65 @@ else:
                     save_listing_to_db(new_listing)
                     st.session_state.marketplace_db.append(new_listing)
                     
-                    # TRIGGER AUTO-RESET MECHANISM SAFELY ON SUCCESS
+                    # Empty out input fields instantly
                     st.session_state.input_raw_log = ""
-                    st.session_state.input_material = "Copper Materials Component"
+                    st.session_state.input_material = ""
                     st.session_state.input_quantity = ""
                     
-                    with st.spinner("Firing text payload vectors into automated n8n agent matrix pipeline..."):
+                    # --- THE WEBHOOK CODE GOES RIGHT HERE ---
+                    with st.spinner("Sending data to n8n automation workflow..."):
                         try:
-                            N8N_WEBHOOK_URL = "https://ecoaudit-ai.app.n8n.cloud/webhook-test/ecoaudit-stream"
-                            requests.post(N8N_WEBHOOK_URL, json={"message": raw_log, "weight": quantity}, timeout=5)
+                            N8N_WEBHOOK_URL = "https://ecoaudit-ai.app.n8n.cloud/webhook-test/d70c8a5d-55ca-4673-a2a8-fe4b26f9c23f"
+                            requests.post(N8N_WEBHOOK_URL, json={
+                                "message": raw_log, 
+                                "material": material_type, 
+                                "weight": quantity,
+                                "sender": st.session_state.current_user
+                            }, timeout=5)
                         except Exception:
-                            pass
-                    st.success("🎯 Dispatched! Pipeline successfully triggered and inputs cleared.")
+                            pass # Keeps your app running even if your n8n server is offline
+                            
+                    st.success("🎯 Posted! The listing is now live and the form has been cleared.")
                     st.rerun()
                 else:
-                    st.error("Please input a text manifest log description and a valid volume capacity calculation vector.")
+                    st.error("Please fill out all description and weight blocks to post your item.")
 
-            # --- DYNAMIC CRUD MANAGEMENT PANEL ---
+            # FIX 2: RE-ENGINEERED DYNAMIC EDIT AND DELETE CONTROLS PANEL
             st.write("<br><br>", unsafe_allow_html=True)
-            st.markdown("### 🛠️ Active Operational Dispatches Management")
+            st.markdown("### 🛠️ Manage Your Active Listings")
             
             my_listings = [item for item in st.session_state.marketplace_db if item["sender_email"] == st.session_state.current_user]
             if not my_listings:
-                st.caption("No active material batches dispatched from this location node yet.")
+                st.caption("You have not uploaded any material logs yet.")
             else:
                 for idx, listing in enumerate(my_listings):
                     with st.container():
-                        st.markdown(f"**Lot ID:** `{listing['id']}` | **Category:** {listing['material_type']}")
-                        edit_qty = st.text_input("Modify Volume / Weight Metric Vector", value=listing['quantity'], key=f"edit_qty_{listing['id']}")
+                        st.markdown(f"**Item ID:** `{listing['id']}` | **Category:** {listing['material_type']}")
+                        edit_qty = st.text_input("Modify Quantity / Weight Vector:", value=listing['quantity'], key=f"edit_qty_{listing['id']}")
                         
                         col_actions = st.columns([1, 1, 4])
                         with col_actions[0]:
-                            if st.button("Update Log", key=f"up_btn_{listing['id']}", use_container_width=True):
+                            if st.button("Save Changes", key=f"up_btn_{listing['id']}", use_container_width=True):
                                 for real_item in st.session_state.marketplace_db:
                                     if real_item["id"] == listing["id"]:
                                         real_item["quantity"] = edit_qty
                                 pd.DataFrame(st.session_state.marketplace_db).to_csv(MARKETPLACE_FILE, index=False)
-                                st.toast("Weight matrix updated successfully!")
+                                st.toast("Quantity updated successfully!")
                                 st.rerun()
                         with col_actions[1]:
-                            if st.button("Delete Lot", key=f"del_btn_{listing['id']}", use_container_width=True):
+                            if st.button("Delete Post", key=f"del_btn_{listing['id']}", use_container_width=True):
                                 st.session_state.marketplace_db = [item for item in st.session_state.marketplace_db if item["id"] != listing["id"]]
                                 pd.DataFrame(st.session_state.marketplace_db).to_csv(MARKETPLACE_FILE, index=False)
-                                st.toast("Lot wiped out from centralized ledger files.")
+                                st.toast("Post successfully deleted from marketplace!")
                                 st.rerun()
                         st.write("---")
 
-        # 🛒 TAB THREE: OPEN PROCUREMENT MATRIX (BUYER VIEW)
+        # TAB THREE: PROCUREMENT WORKSPACE (BUYER VIEW)
         elif st.session_state.current_tab == "🛒 Open Procurement (Buy)":
-            st.title("Active Byproduct Procurement Streams")
+            st.title("🛒 Browse Active Byproduct Streams")
             st.write("---")
             if not st.session_state.marketplace_db:
-                st.info("No industrial manufacturing remnant streams listed today.")
+                st.info("No factories have listed items for collection today.")
             else:
                 for idx, listing in enumerate(st.session_state.marketplace_db):
                     col_b1, col_b2 = st.columns([3, 1])
@@ -512,55 +527,48 @@ else:
                             <div class='eco-card' style='margin-bottom:0;'>
                                 <h3 style='color:#4ADE80; margin:0;'>📦 {listing['material_type']} ({listing['quantity']})</h3>
                                 <p style='color:#E2E8F0; margin-top:5px;'><em>"{listing['raw_text']}"</em></p>
-                                <small style='color:#64748B;'>Origin Plant Node: {listing['sender_company']} | Log: {listing['timestamp']}</small>
+                                <small style='color:#64748B;'>Factory Node: {listing['sender_company']} | Logged: {listing['timestamp']}</small>
                             </div>
                         """, unsafe_allow_html=True)
                     with col_b2:
                         st.write("")
-                        if st.button("Claim & Negotiate", key=f"claim_{idx}", use_container_width=True):
+                        if st.button("Claim Material", key=f"claim_{idx}", use_container_width=True):
                             channel_id = f"{listing['id']}__chat"
                             if channel_id not in st.session_state.private_chats:
                                 st.session_state.private_chats[channel_id] = [
                                     {
                                         "role": "assistant",
-                                        "sender_name": "System Protocol Engine",
-                                        "msg": f"Secure transaction bridge established between Seller Node ({listing['sender_company']}) and Buyer Node ({user_meta['company_name']})."
+                                        "sender_name": "System Security",
+                                        "msg": f"Transaction channel opened between Seller ({listing['sender_company']}) and Buyer ({user_meta['company_name']})."
                                     }
                                 ]
-                            
-                            try:
-                                CLAIM_WEBHOOK_URL = "https://ecoaudit-ai.app.n8n.cloud/webhook-test/d70c8a5d-55ca-4673-a2a8-fe4b26f9c23f"
-                                requests.post(CLAIM_WEBHOOK_URL, json={
-                                    "seller_email": listing["sender_email"],
-                                    "seller_company": listing["sender_company"],
-                                    "buyer_company": user_meta["company_name"],
-                                    "material": listing["material_type"],
-                                    "quantity": listing["quantity"]
-                                }, timeout=5)
-                            except Exception:
-                                pass
-                                
-                            st.toast("Connection matrix locked! Launching negotiation workspace terminal.")
+                            st.toast("Deal claimed! Opening private chat room.")
                             st.session_state.current_tab = "💬 Communication Terminal"
                             st.rerun()
 
-        # 💬 TAB FOUR: PRIVATE PEER-TO-PEER CONSOLE TERMINAL
+        # TAB FOUR: CHAT WORKSPACE TERMINAL
         elif st.session_state.current_tab == "💬 Communication Terminal":
-            st.title("B2B Secure Negotiation Terminal")
-            st.write("Direct peer-to-peer relationship tracks locked away from the global marketplace views.")
+            st.title("💬 Secure Negotiation Terminal")
+            st.write("Private chat rooms securely locked away from other marketplace viewers.")
             st.write("---")
             
+            # Load active channels dynamically based on active users
             active_channels = []
+            for ch_id, chat_history in st.session_state.private_chats.items():
+                if ch_id.startswith("DIRECT__") or any(item["sender_email"] == st.session_state.current_user for item in st.session_state.marketplace_db if f"{item['id']}__chat" == ch_id):
+                     active_channels.append((ch_id, f"Channel ID: {ch_id[:12]}..."))
+            
             for listing in st.session_state.marketplace_db:
                 channel_key = f"{listing['id']}__chat"
-                if listing["sender_email"] == st.session_state.current_user or channel_key in st.session_state.private_chats:
-                    active_channels.append((channel_key, f"📦 {listing['material_type']} ({listing['sender_company']})"))
+                if listing["sender_email"] == st.session_state.current_user:
+                    if (channel_key, f"📦 Item {listing['material_type']} Chat") not in active_channels:
+                        active_channels.append((channel_key, f"📦 Item {listing['material_type']} Chat"))
             
             if not active_channels:
-                st.info("No active private transactional deal matrices mapped yet. Initiate a stream claim sequence to start.")
+                st.info("No active chat discussions found. Connect with companies or claim a listing lot to chat.")
             else:
                 channel_options = [label for _, label in active_channels]
-                selected_label = st.selectbox("Select Active Private Deal Negotiation Channel:", channel_options)
+                selected_label = st.selectbox("Select Active Business Chat Channel:", channel_options)
                 selected_channel_key = [k for k, label in active_channels if label == selected_label][0]
                 
                 if selected_channel_key not in st.session_state.private_chats:
@@ -570,7 +578,7 @@ else:
                     with st.chat_message(chat["role"]):
                         st.write(f"**{chat['sender_name']}**: {chat['msg']}")
                         
-                user_msg = st.chat_input("Enter transaction text message payload parameters...")
+                user_msg = st.chat_input("Type your message here...")
                 if user_msg:
                     st.session_state.private_chats[selected_channel_key].append({
                         "role": "user",
@@ -579,33 +587,32 @@ else:
                     })
                     st.rerun()
 
-        # ⚙️ TAB FIVE: NODE METRICS & ACCOUNT SETTINGS INDEX
+        # TAB FIVE: ACCOUNT HISTORY CONTROLS
         elif st.session_state.current_tab == "⚙️ My Account Settings":
-            st.title("Portal Node Management")
+            st.title("⚙️ Profile Management")
             st.write("---")
             st.markdown(f"""
                 <div class='eco-card'>
                     <h3 style='color:#4ADE80; margin:0;'>🏢 {user_meta['company_name']}</h3>
                     <hr style='border-color:rgba(255,255,255,0.1);'>
-                    <p><strong>Authenticated Identity Node Email:</strong> {st.session_state.current_user}</p>
-                    <p><strong>Operational Role Assignment:</strong> {user_meta['role']}</p>
-                    <p><strong>Physical Operating Base Hub:</strong> {user_meta['location']}</p>
-                    <p><strong>License / Dynamic Parameters Vector:</strong> {user_meta['meta_1']}</p>
+                    <p><strong>Account Email Address:</strong> {st.session_state.current_user}</p>
+                    <p><strong>Role Type:</strong> {user_meta['role']}</p>
+                    <p><strong>Physical Location Base:</strong> {user_meta['location']}</p>
+                    <p><strong>License/Custom Metrics Code:</strong> {user_meta['meta_1']}</p>
                 </div>
             """, unsafe_allow_html=True)
             
-            # --- NODE SPECIFIC TRACKING OVERVIEW ---
-            st.markdown("### 📋 Node Manifest Posting History Ledger")
+            st.markdown("### 📋 Your Posting History Ledger")
             my_historical_logs = [item for item in st.session_state.marketplace_db if item["sender_email"] == st.session_state.current_user]
             
             if not my_historical_logs:
-                st.info("No transaction history traces mapped to this profile node index yet.")
+                st.info("You have not uploaded any entries yet.")
             else:
                 for past_item in my_historical_logs:
                     st.markdown(f"""
                         <div style="background: rgba(255,255,255,0.02); padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #4ADE80;">
                             <span style="float: right; color: #64748B;"><small>{past_item['timestamp']}</small></span>
                             <strong style="color: #F8FAFC;">ID: {past_item['id']} | {past_item['material_type']}</strong><br>
-                            <span style="color: #A78BFA;">Registered Weight Allocation: {past_item['quantity']}</span>
+                            <span style="color: #A78BFA;">Logged Weight: {past_item['quantity']}</span>
                         </div>
                     """, unsafe_allow_html=True)
