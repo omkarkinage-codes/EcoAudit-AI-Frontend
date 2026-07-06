@@ -393,7 +393,7 @@ else:
                             st.session_state.current_tab = "💬 Communication Terminal"
                             st.rerun()
 
-        # --- MODULE TWO: SUPPLY DISPATCH PIPELINE ---
+        # --- MODULE TWO: SUPPLY DISPATCH PIPELINE -
         elif st.session_state.current_tab == "🚀 Dispatch Byproduct (Sell)":
             st.title("🚀 Post New Byproduct Material")
             st.write("---")
