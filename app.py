@@ -5,7 +5,7 @@ import os
 import datetime
 import requests
 
-# --- PAGE CONFIGURATION (MUST BE FIRST) ---
+# --- PAGE CONFIGURATION (MUST BE ABSOLUTE FIRST) ---
 st.set_page_config(page_title="EcoAudit AI", page_icon="🌿", layout="wide")
 
 # --- DATABASE ENGINE & SHEET PERSISTENCE STORAGE MATRIX ---
@@ -25,7 +25,6 @@ def load_users_db():
         except Exception:
             pass
             
-    # Default fallback seed matching your environment constraints
     df = pd.DataFrame(columns=["email", "password", "company_name", "location", "role", "meta_1", "meta_2"])
     df = pd.concat([df, pd.DataFrame([{
         "email": "sahyadri@poly.com",
@@ -82,7 +81,7 @@ def save_listing_to_db(listing_dict):
         df_new.to_csv(MARKETPLACE_FILE, index=False)
 
 
-# --- SYSTEM STATE MEMORY VECTOR BOOTSTRAP ---
+# --- FIXED GLOBAL SYSTEM STATE BOOTSTRAP MATRIX ---
 if "db_initialized" not in st.session_state:
     st.session_state.users_db = load_users_db()
     st.session_state.marketplace_db = load_marketplace_db()
@@ -95,9 +94,15 @@ if "db_initialized" not in st.session_state:
     st.session_state.selected_role = None
     st.session_state.sidebar_open = True
     st.session_state.private_chats = {}
+    
+    # CRITICAL FIX: Initialize input clearing memory states right at global app bootup
+    st.session_state.input_raw_log = ""
+    st.session_state.input_material = "Copper Materials Component"
+    st.session_state.input_quantity = ""
+    
     st.session_state.db_initialized = True
 
-# --- ENFORCED PREMIUM DARK MODE STYLE MATRIX ---
+# --- ENFORCED DARK MODE STYLING ARCHITECTURE ---
 st.markdown("""
     <style>
     html, body, .stApp {
@@ -172,7 +177,6 @@ if not st.session_state.started and not st.session_state.logged_in:
             st.session_state.auth_action = "Sign In"
             st.rerun()
     with col_btn_up:
-        # Removed type="primary" to make buttons identical
         if st.button("Sign Up", use_container_width=True):
             st.session_state.started = True
             st.session_state.auth_action = "Sign Up"
@@ -326,7 +330,7 @@ elif st.session_state.started and not st.session_state.logged_in:
 else:
     user_meta = st.session_state.users_db[st.session_state.current_user]
 
-    options = ["📊 Dashboard", "💬 Communication Terminal", "⚙️ My Account "]
+    options = ["📊 Dashboard", "💬 Communication Terminal", "⚙️ My Account Settings"]
     if st.session_state.current_role == "Industrial Seller (Factory / Plant)":
         options.insert(1, "🚀 Dispatch Byproduct (Sell)")
     else:
@@ -349,6 +353,7 @@ else:
             st.write("<br><br>" * 4, unsafe_allow_html=True)
             st.write("---")
             if st.button("Logout", use_container_width=True, key="side_logout_btn"):
+                # Clean exit parameters
                 st.session_state.logged_in = False
                 st.session_state.started = False
                 st.session_state.selected_role = None
@@ -423,26 +428,20 @@ else:
                 if not has_other_buyers:
                     st.write("*No active external buyer nodes available in database registries.*")
 
-        # 🚀 MODULE TWO: SELLER MODULE DISPATCH (WELL-STRUCTURED WITH CLEAR & CRUD ACTIONS)
+        # 🚀 TAB TWO: MATERIALS DISPATCH CONTROLLER (SELLER VIEW)
         elif st.session_state.current_tab == "🚀 Dispatch Byproduct (Sell)":
-            st.title("🚀 Autonomous Pipeline Dispatch")
+            st.title("Autonomous Pipeline Dispatch")
             st.write("---")
             
-            # Initialize empty text key vectors if missing to safely handle automatic clearing resets
-            if "input_raw_log" not in st.session_state: st.session_state.input_raw_log = ""
-            if "input_material" not in st.session_state: st.session_state.input_material = "Copper Materials Component"
-            if "input_quantity" not in st.session_state: st.session_state.input_quantity = ""
-
-            # Layout forms with clear key state associations
-            raw_log = st.text_area("Paste Raw Warehouse Manifest / Plant Chat Log:", value=st.session_state.input_raw_log, placeholder="Paste unstructured data strings...", key="text_raw_log")
+            # Layout state fields safely referenced from the global state dictionary
+            raw_log = st.text_area("Paste Raw Warehouse Manifest / Plant Chat Log:", value=st.session_state.input_raw_log, placeholder="Paste unstructured manifest data string payloads here...", key="text_raw_log")
             material_type = st.text_input("Material Category Mapping", value=st.session_state.input_material, key="text_material")
             quantity = st.text_input("Estimated Weight/Volume (Always specify 'kg' or 'tons')", value=st.session_state.input_quantity, key="text_quantity")
             
             if st.button("Trigger Autonomous Matching Pipeline", type="primary", use_container_width=True):
                 if raw_log.strip() and quantity.strip():
-                    new_id = f"LOT-{int(datetime.datetime.now().timestamp())}"
                     new_listing = {
-                        "id": new_id,
+                        "id": f"LOT-{int(datetime.datetime.now().timestamp())}",
                         "sender_email": st.session_state.current_user,
                         "sender_company": user_meta["company_name"],
                         "raw_text": raw_log,
@@ -450,26 +449,24 @@ else:
                         "quantity": quantity,
                         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
                     }
-                    
-                    # Commit permanently to persistent system sheets
                     save_listing_to_db(new_listing)
                     st.session_state.marketplace_db.append(new_listing)
                     
-                    # TRIGGER LIVE AUTO-RESET MECHANISM BEFORE PAGE RELOADS
+                    # TRIGGER AUTO-RESET MECHANISM SAFELY ON SUCCESS
                     st.session_state.input_raw_log = ""
                     st.session_state.input_material = "Copper Materials Component"
                     st.session_state.input_quantity = ""
                     
-                    with st.spinner("Processing metadata strings..."):
+                    with st.spinner("Firing text payload vectors into automated n8n agent matrix pipeline..."):
                         try:
                             N8N_WEBHOOK_URL = "https://ecoaudit-ai.app.n8n.cloud/webhook-test/ecoaudit-stream"
                             requests.post(N8N_WEBHOOK_URL, json={"message": raw_log, "weight": quantity}, timeout=5)
                         except Exception:
                             pass
-                    st.success("🎯 Dispatched! Pipeline successfully triggered and input cleared.")
+                    st.success("🎯 Dispatched! Pipeline successfully triggered and inputs cleared.")
                     st.rerun()
                 else:
-                    st.error("Provide a text log manifest and volume parameter metrics to execute routing.")
+                    st.error("Please input a text manifest log description and a valid volume capacity calculation vector.")
 
             # --- DYNAMIC CRUD MANAGEMENT PANEL ---
             st.write("<br><br>", unsafe_allow_html=True)
@@ -487,7 +484,6 @@ else:
                         col_actions = st.columns([1, 1, 4])
                         with col_actions[0]:
                             if st.button("Update Log", key=f"up_btn_{listing['id']}", use_container_width=True):
-                                # Dynamic matrix calculation update block
                                 for real_item in st.session_state.marketplace_db:
                                     if real_item["id"] == listing["id"]:
                                         real_item["quantity"] = edit_qty
@@ -584,9 +580,8 @@ else:
                     st.rerun()
 
         # ⚙️ TAB FIVE: NODE METRICS & ACCOUNT SETTINGS INDEX
-        # ⚙️ MODULE FIVE: SETTINGS CONTROL SHEETS MATRIX WITH HISTORICAL LEDGER EXTRACTION
         elif st.session_state.current_tab == "⚙️ My Account Settings":
-            st.title("⚙️ Portal Node Management")
+            st.title("Portal Node Management")
             st.write("---")
             st.markdown(f"""
                 <div class='eco-card'>
