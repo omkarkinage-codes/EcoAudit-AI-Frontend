@@ -5,11 +5,17 @@ import os
 import datetime
 import requests
 
+
 # --- BROWSER CONFIGURATION ---
 st.set_page_config(page_title="EcoAudit AI", page_icon="🌿", layout="wide")
 
+# 1. Define the variables first
 DB_FILE = "users_database.csv"
 MARKETPLACE_FILE = "marketplace_database.csv"
+
+# 2. TEMPORARY CLEANING LINES (Safe to run here!)
+if os.path.exists(DB_FILE): os.remove(DB_FILE)
+if os.path.exists(MARKETPLACE_FILE): os.remove(MARKETPLACE_FILE)
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
