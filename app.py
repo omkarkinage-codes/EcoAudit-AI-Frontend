@@ -39,10 +39,10 @@ def load_users_db():
     return df.set_index("email").to_dict(orient="index")
 
 def save_user_to_db(email, data_dict):
-    secure_password = hash_password(data_dict["password"])
+    """Saves the user payload directly since it is already securely hashed."""
     df_new = pd.DataFrame([{
         "email": email,
-        "password": secure_password,
+        "password": data_dict["password"],  # FIX: Removed the second hash_password wrapper
         "company_name": data_dict["company_name"],
         "location": data_dict["location"],
         "role": data_dict["role"],
