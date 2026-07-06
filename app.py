@@ -8,43 +8,66 @@ import requests
 # --- ENTERPRISE PLATFORM CONFIGURATION ---
 st.set_page_config(page_title="EcoAudit AI", page_icon="🌿", layout="wide")
 
+# --- INITIAL FILE PATH SETUP ---
 DB_FILE = "users_database.csv"
 MARKETPLACE_FILE = "marketplace_database.csv"
+CHAT_FILE = "chat_database.csv"  # ← NEW DIRECTORY TRUCKING LAYER
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
-# --- FORCIBLE DATA LAYER WRITER (Creates files locally instantly) ---
 def init_storage_layers():
     if not os.path.exists(DB_FILE):
-        df = pd.DataFrame(columns=["email", "password", "company_name", "location", "role", "meta_1", "meta_2"])
-        df = pd.concat([df, pd.DataFrame([{
-            "email": "sahyadri@poly.com",
+        df_users = pd.DataFrame(columns=["email", "password", "company_name", "location", "role", "meta_1", "meta_2"])
+        admin_account = pd.DataFrame([{
+            "email": "test@ecoaudit.com",
             "password": hash_password("password123"),
-            "company_name": "Sahyadri Polymers & Recycling",
-            "location": "Pimpri-Chinchwad Industrial Corridor, Pune",
-            "role": "Verified B2B Buyer (Recycling Facility)",
-            "meta_1": "MPCB-REG-94821",
-            "meta_2": "50 Tons/Month"
-        }])], ignore_index=True)
-        df.to_csv(DB_FILE, index=False)
+            "company_name": "EcoAudit Test Node",
+            "location": "Pune",
+            "role": "Industrial Seller (Factory / Plant)",
+            "meta_1": "Manufacturing",
+            "meta_2": "N/A"
+        }])
+        df_users = pd.concat([df_users, admin_account], ignore_index=True)
+        df_users.to_csv(DB_FILE, index=False)
 
     if not os.path.exists(MARKETPLACE_FILE):
-        df = pd.DataFrame(columns=["id", "sender_email", "sender_company", "raw_text", "material_type", "quantity", "timestamp"])
-        df.to_csv(MARKETPLACE_FILE, index=False)
+        df_market = pd.DataFrame(columns=["id", "sender_email", "sender_company", "raw_text", "material_type", "quantity", "timestamp"])
+        df_market.to_csv(MARKETPLACE_FILE, index=False)
+
+    # --- NEW: CRITICAL FORCROSS-BROWSER P2P DELIVERY ---
+    if not os.path.exists(CHAT_FILE):
+        df_chat = pd.DataFrame(columns=["room_id", "sender_email", "sender_name", "msg", "timestamp"])
+        df_chat.to_csv(CHAT_FILE, index=False)
 
 init_storage_layers()
 
-# --- SYSTEM GLOBAL STATE ARCHITECTURE ---
+
+# --- RE-ENGINEERED INSTANT PERSISTENCE STATE ENGINE ---
+# This looks at your local tracking vectors to prevent a browser frame reload from wiping authorization tokens
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.current_user = None
     st.session_state.current_role = None
-    st.session_state.current_tab = "📊 Dashboard"
+    st.session_state.current_tab = "📊 Dashboard Overview"
     st.session_state.started = False
     st.session_state.auth_action = "Sign In"
     st.session_state.selected_role = None
     st.session_state.private_chats = {}
+
+# --- INTUITIONAL FRAME KEEPER PROTOCOL ---
+# Check if the query parameters contain an active running token to recover session on direct browser refreshes
+query_params = st.query_params
+if "session_token" in query_params and not st.session_state.logged_in:
+    saved_email = query_params["session_token"]
+    if os.path.exists(DB_FILE):
+        df_users = pd.read_csv(DB_FILE)
+        df_users['email'] = df_users['email'].astype(str).str.strip().str.lower()
+        user_row = df_users[df_users['email'] == saved_email]
+        if not user_row.empty:
+            st.session_state.logged_in = True
+            st.session_state.current_user = saved_email
+            st.session_state.current_role = user_row.iloc[0]['role']
 
 # --- CLEAN USER-FRIENDLY UI CSS DESIGN ---
 st.markdown("""
@@ -135,21 +158,30 @@ elif st.session_state.started and not st.session_state.logged_in:
         password_input = st.text_input("Password", type="password", placeholder="••••••••").strip()
         
         if st.button("Login", type="primary", use_container_width=True):
-            df_users = pd.read_csv(DB_FILE)
-            df_users['email'] = df_users['email'].astype(str).str.strip().str.lower()
-            user_row = df_users[df_users['email'] == email_input]
-            
-            if not user_row.empty:
-                if str(user_row.iloc[0]['password']) == hash_password(password_input):
-                    st.session_state.logged_in = True
-                    st.session_state.current_user = email_input
-                    st.session_state.current_role = user_row.iloc[0]['role']
-                    st.toast("Success!")
-                    st.rerun()
+            if os.path.exists(DB_FILE):
+                df_users = pd.read_csv(DB_FILE)
+                df_users['email'] = df_users['email'].astype(str).str.strip().str.lower()
+                user_row = df_users[df_users['email'] == email_input]
+                
+                if not user_row.empty:
+                    typed_password_hash = hash_password(password_input)
+                    stored_password_hash = str(user_row.iloc[0]['password']).strip()
+                    
+                    if typed_password_hash == stored_password_hash:
+                        st.session_state.logged_in = True
+                        st.session_state.current_user = email_input
+                        st.session_state.current_role = user_row.iloc[0]['role']
+                        
+                        # CRITICAL FIX: Push a secure session token right into the URL parameters 
+                        # so browser refreshes read this token instead of dropping to the login gate!
+                        st.query_params["session_token"] = email_input
+                        
+                        st.toast("Welcome back! Login Successful.")
+                        st.rerun()
+                    else:
+                        st.error("Incorrect password credentials entered. Please try again.")
                 else:
-                    st.error("Incorrect password credentials entered.")
-            else:
-                st.error("Email destination vector matching parameters not found.")
+                    st.error("Account email not found. Please register a new account first.")
     else:
         if st.session_state.selected_role is None:
             st.markdown("<h3>Select Account Profile Type</h3>", unsafe_allow_html=True)
@@ -178,16 +210,56 @@ elif st.session_state.started and not st.session_state.logged_in:
                     if email in df_users['email'].values:
                         st.error("Account email is already registered.")
                     else:
+                        # Convert plain text to the secure SHA-256 hash string format
+                        secure_password_hash = hash_password(password)
+                        
                         new_u = pd.DataFrame([{
-                            "email": email, "password": hash_password(password),
-                            "company_name": company_name, "location": location,
-                            "role": st.session_state.selected_role, "meta_1": meta_1, "meta_2": "N/A"
+                            "email": email, 
+                            "password": secure_password_hash, 
+                            "company_name": company_name, 
+                            "location": location,
+                            "role": st.session_state.selected_role, 
+                            "meta_1": meta_1, 
+                            "meta_2": "N/A"
                         }])
+                        
                         pd.concat([df_users, new_u], ignore_index=True).to_csv(DB_FILE, index=False)
+                        
                         st.session_state.logged_in = True
                         st.session_state.current_user = email
                         st.session_state.current_role = st.session_state.selected_role
+                        st.toast("Registration complete! Welcome to the console.")
                         st.rerun()
+                else:
+                    st.error("Please fill out all fields before clicking complete.")
+
+            # --- ENFORCE COMPATIBLE REGISTRATION STORAGE ---
+if st.button("Complete Registration", type="primary", use_container_width=True):
+    if email and password and company_name:
+        df_users = pd.read_csv(DB_FILE)
+        df_users['email'] = df_users['email'].astype(str).str.strip().str.lower()
+        
+        if email in df_users['email'].values:
+            st.error("Account email is already registered.")
+        else:
+            # CRITICAL: We hash the clean password string before putting it in the DataFrame
+            hashed_input_password = hash_password(password.strip())
+            
+            new_u = pd.DataFrame([{
+                "email": email, 
+                "password": hashed_input_password,  # Stored as the 64-character hash string
+                "company_name": company_name, 
+                "location": location,
+                "role": st.session_state.selected_role, 
+                "meta_1": meta_1, 
+                "meta_2": "N/A"
+            }])
+            pd.concat([df_users, new_u], ignore_index=True).to_csv(DB_FILE, index=False)
+            
+            st.session_state.logged_in = True
+            st.session_state.current_user = email
+            st.session_state.current_role = st.session_state.selected_role
+            st.rerun()
 
 # ==========================================
 # MAIN FULL-STACK EXECUTIVE ENVIRONMENT
@@ -198,26 +270,46 @@ else:
     user_meta = df_users[df_users['email'] == st.session_state.current_user].iloc[0]
 
     # INSTANT RENDER SIDEBAR PANEL (Removes Double-Click Framework Bugs Completely)
+# HIGH-SPEED SINGLE-CLICK SIDEBAR MENU
     with st.sidebar:
         st.markdown(f"<h2 style='color:#4ADE80; margin:0;'>Console</h2>", unsafe_allow_html=True)
         st.caption(f"Active: {user_meta['company_name']}")
         st.write("---")
         
-        if st.button("📊 Dashboard Overview", use_container_width=True): st.session_state.current_tab = "📊 Dashboard"
-        
+        # 1. Compile the navigation options dynamically based on roles
+        nav_options = ["📊 Dashboard Overview"]
         if st.session_state.current_role == "Industrial Seller (Factory / Plant)":
-            if st.button("🚀 Dispatch Byproduct", use_container_width=True): st.session_state.current_tab = "🚀 Dispatch Byproduct"
-            if st.button("🛠️ Manage Active Posts", use_container_width=True): st.session_state.current_tab = "🛠️ Manage Posts"
+            nav_options.extend(["🚀 Dispatch Byproduct", "🛠️ Manage Active Posts"])
         else:
-            if st.button("🛒 Open Procurement", use_container_width=True): st.session_state.current_tab = "🛒 Open Procurement"
-            
-        if st.button("💬 Communication Terminal", use_container_width=True): st.session_state.current_tab = "💬 Communication Terminal"
-        if st.button("⚙️ Profile Settings", use_container_width=True): st.session_state.current_tab = "⚙️ Profile Settings"
+            nav_options.extend(["🛒 Open Procurement"])
+        nav_options.extend(["💬 Communication Terminal", "⚙️ Profile Settings"])
         
+        # 2. Use a native radio list styled cleanly. This switches INSTANTLY on a single tap.
+        # It maps your current_tab to the select index so it stays highlight active.
+        if st.session_state.current_tab not in nav_options:
+            st.session_state.current_tab = nav_options[0]
+            
+        selected_tab = st.radio(
+            "Navigation Menu",
+            options=nav_options,
+            index=nav_options.index(st.session_state.current_tab),
+            label_visibility="collapsed"
+        )
+        
+        # 3. Direct execution switch - runs instantly
+        if selected_tab != st.session_state.current_tab:
+            st.session_state.current_tab = selected_tab
+            st.rerun()
+            
         st.write("<br><br>" * 4, unsafe_allow_html=True)
         if st.button("Logout", type="secondary", use_container_width=True):
             st.session_state.logged_in = False
             st.session_state.started = False
+            st.session_state.current_user = None
+            st.session_state.current_role = None
+            
+            # Clear browser token parameters cleanly on structural manual signout
+            st.query_params.clear()
             st.rerun()
 
     # --- CORE TAB 1: DASHBOARD ---
@@ -263,23 +355,24 @@ else:
                         st.session_state.active_room_key = shared_room_hash
                         st.session_state.current_tab = "💬 Communication Terminal"
                         st.rerun()
-
-    # --- CORE TAB 2: SELLER FORMS DISPATCH PIPELINE ---
+# --- TAB 2: SELLER FORMS DISPATCH PIPELINE ---
     elif st.session_state.current_tab == "🚀 Dispatch Byproduct":
         st.title("🚀 Log New Byproduct Stream")
         st.write("---")
         
-        # Explicit Session Hooks to Guarantee Instant Form Wiping
-        if "form_log" not in st.session_state: st.session_state.form_log = ""
-        if "form_mat" not in st.session_state: st.session_state.form_mat = ""
-        if "form_qty" not in st.session_state: st.session_state.form_qty = ""
+        # 1. Initialize empty session state variables if they don't exist yet
+        if "dispatch_log" not in st.session_state: st.session_state.dispatch_log = ""
+        if "dispatch_mat" not in st.session_state: st.session_state.dispatch_mat = ""
+        if "dispatch_qty" not in st.session_state: st.session_state.dispatch_qty = ""
 
-        raw_text_input = st.text_area("Paste Raw Warehouse Log / Factory Notes:", value=st.session_state.form_log, key="raw_text_input_f")
-        material_type_input = st.text_input("Material Category Mapping", value=st.session_state.form_mat, key="material_type_input_f")
-        quantity_input = st.text_input("Total Weight / Volume (Specify 'kg' or 'tons')", value=st.session_state.form_qty, key="quantity_input_f")
+        # 2. Bind the inputs directly to the session state keys
+        raw_text_input = st.text_area("Paste Raw Warehouse Log / Factory Notes:", value=st.session_state.dispatch_log, key="raw_text_box")
+        material_type_input = st.text_input("Material Category Mapping", value=st.session_state.dispatch_mat, key="material_box")
+        quantity_input = st.text_input("Total Weight / Volume (Specify 'kg' or 'tons')", value=st.session_state.dispatch_qty, key="quantity_box")
         
         if st.button("Post Listing to Market", type="primary", use_container_width=True):
             if raw_text_input.strip() and quantity_input.strip():
+                # 3. Read and append to your marketplace CSV
                 df_market = pd.read_csv(MARKETPLACE_FILE)
                 new_post = pd.DataFrame([{
                     "id": f"LOT-{int(datetime.datetime.now().timestamp())}",
@@ -292,25 +385,30 @@ else:
                 }])
                 pd.concat([df_market, new_post], ignore_index=True).to_csv(MARKETPLACE_FILE, index=False)
                 
-                # RE-ENGINEERED: Wipe input elements instantly from memory before reload frames trigger
-                st.session_state.form_log = ""
-                st.session_state.form_mat = ""
-                st.session_state.form_qty = ""
+                # 4. CRITICAL FIX: Empty the fields out inside session state instantly
+                st.session_state.dispatch_log = ""
+                st.session_state.dispatch_mat = ""
+                st.session_state.dispatch_qty = ""
                 
+                # 5. Send out the n8n automation webhook pipeline payload safely
                 try:
                     requests.post("https://ecoaudit-ai.app.n8n.cloud/webhook-test/d70c8a5d-55ca-4673-a2a8-fe4b26f9c23f", 
                                   json={"message": raw_text_input, "material": material_type_input, "weight": quantity_input, "sender": st.session_state.current_user}, timeout=2)
                 except Exception: pass
                 
-                st.success("🎯 Material batch listed live! Form cleared out completely.")
+                # 6. CRITICAL FIX: Flash a global toast pop-up notification on screen
+                st.toast("🎯 Material batch listed live! Form cleared out completely.")
                 st.rerun()
             else:
-                st.error("Please fill out all descriptive parameter values.")
+                st.error("Please fill out all descriptive parameter values before posting.")
 
     # --- CORE TAB 3: MODIFICATION ENGINE WORKSPACE ---
+# --- TAB: MANAGE POSTS MODIFICATION LAYER ---
     elif st.session_state.current_tab == "🛠️ Manage Posts":
         st.title("🛠️ Manage Your Active Listings")
         st.write("---")
+        
+        # Read directly from the file to guarantee it displays your latest cloud rows
         df_market = pd.read_csv(MARKETPLACE_FILE)
         my_posts = df_market[df_market['sender_email'] == st.session_state.current_user]
         
@@ -319,7 +417,9 @@ else:
         else:
             for idx, row in my_posts.iterrows():
                 with st.container():
-                    st.markdown(f"**Item ID Identification Code:** `{row['id']}` | **Mapped Category:** {row['material_type']}")
+                    st.markdown(f"**Item ID:** `{row['id']}` | **Mapped Category:** {row['material_type']}")
+                    
+                    # Quantity tracking field edit area
                     new_qty = st.text_input("Modify Quantity Tracking Parameter Value:", value=row['quantity'], key=f"edit_{row['id']}")
                     
                     c1, c2, _ = st.columns([1, 1, 4])
@@ -366,48 +466,65 @@ else:
                         st.rerun()
 
     # --- CORE TAB 5: SYNCHRONIZED NEGOTIATION CHAT TERMINAL ---
+    # --- TAB 5: SECURE CROSS-SESSION P2P NEGOTIATION TERMINAL ---
     elif st.session_state.current_tab == "💬 Communication Terminal":
         st.title("💬 Secure Negotiation Terminal")
         st.write("---")
         
+        # 1. Map all potential conversation channels dynamically
         rooms_map = {}
         for _, row in df_users.iterrows():
             if row['email'] != st.session_state.current_user:
                 sorted_pair = sorted([st.session_state.current_user, row['email']])
                 r_hash = f"ROOM_{hashlib.md5((sorted_pair[0] + sorted_pair[1]).encode()).hexdigest()}"
-                rooms_map[r_hash] = f"Message Thread with: {row['company_name']}"
+                rooms_map[r_hash] = f"Discussion Thread with: {row['company_name']}"
                 
         if "active_room_key" not in st.session_state or st.session_state.active_room_key not in rooms_map:
             st.session_state.active_room_key = list(rooms_map.keys())[0] if rooms_map else None
             
         if not st.session_state.active_room_key:
-            st.info("No communication threads available.")
+            st.info("No active communication threads available.")
         else:
             sel_label = st.selectbox("Select Secure Active Channel:", list(rooms_map.values()), index=list(rooms_map.keys()).index(st.session_state.active_room_key) if st.session_state.active_room_key in rooms_map else 0)
             st.session_state.active_room_key = [k for k, v in rooms_map.items() if v == sel_label][0]
             
             curr_room = st.session_state.active_room_key
-            if curr_room not in st.session_state.private_chats:
-                st.session_state.private_chats[curr_room] = []
+            
+            # 2. READ LIVE MESSAGES DIRECTLY FROM THE FILE
+            df_chat = pd.read_csv(CHAT_FILE)
+            room_messages = df_chat[df_chat['room_id'] == curr_room]
+            
+            # 3. RENDER ALL HISTORICAL MESSAGES IN REAL-TIME FOR BOTH USERS
+            for idx, chat_row in room_messages.iterrows():
+                # Determine bubble alignment based on active user context
+                is_me = chat_row['sender_email'] == st.session_state.current_user
+                bubble_role = "user" if is_me else "assistant"
                 
-            # Render Messaging Layers Dynamically
-            for msg_idx, chat in enumerate(st.session_state.private_chats[curr_room]):
                 col_text, col_act = st.columns([10, 2])
                 with col_text:
-                    with st.chat_message(chat["role"]):
-                        st.write(f"**{chat['sender_name']}**: {chat['msg']}")
+                    with st.chat_message(bubble_role):
+                        st.write(f"**{chat_row['sender_name']}**: {chat_row['msg']}")
                 with col_act:
                     st.write("<br>", unsafe_allow_html=True)
-                    if st.button("❌ Wipe Message", key=f"msg_del_{curr_room}_{msg_idx}"):
-                        st.session_state.private_chats[curr_room].pop(msg_idx)
-                        st.rerun()
+                    # Allow a user to delete their own messages cleanly across both sides
+                    if is_me:
+                        if st.button("❌ Wipe", key=f"msg_del_{idx}"):
+                            df_chat.drop(idx).to_csv(CHAT_FILE, index=False)
+                            st.rerun()
                         
+            # 4. CAPTURE AND APPEND NEW MESSAGES TO CORE CSV FILE INSTANTLY
             text_input_msg = st.chat_input("Type transaction negotiations here...")
             if text_input_msg:
-                st.session_state.private_chats[curr_room].append({
-                    "role": "user", "sender_name": user_meta["company_name"], "msg": text_input_msg
-                })
+                new_msg_entry = pd.DataFrame([{
+                    "room_id": curr_room,
+                    "sender_email": st.session_state.current_user,
+                    "sender_name": user_meta["company_name"],
+                    "msg": text_input_msg.strip(),
+                    "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                }])
+                pd.concat([df_chat, new_msg_entry], ignore_index=True).to_csv(CHAT_FILE, index=False)
                 st.rerun()
+
 
     # --- CORE TAB 6: SETTINGS PROFILE ARCHIVE ---
     elif st.session_state.current_tab == "⚙️ Profile Settings":
