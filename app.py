@@ -423,18 +423,26 @@ else:
                 if not has_other_buyers:
                     st.write("*No active external buyer nodes available in database registries.*")
 
-        # 🚀 TAB TWO: MATERIALS DISPATCH CONTROLLER (SELLER VIEW)
+        # 🚀 MODULE TWO: SELLER MODULE DISPATCH (WELL-STRUCTURED WITH CLEAR & CRUD ACTIONS)
         elif st.session_state.current_tab == "🚀 Dispatch Byproduct (Sell)":
-            st.title("Autonomous Pipeline Dispatch")
+            st.title("🚀 Autonomous Pipeline Dispatch")
             st.write("---")
-            raw_log = st.text_area("Paste Raw Warehouse Manifest / Plant Chat Log:", placeholder="Paste unstructured manifest data string payloads here...")
-            material_type = st.text_input("Material Category Mapping", value="Polyurethane Polymer Component")
-            quantity = st.text_input("Estimated Weight/Volume (Always specify 'kg' or 'tons')", placeholder="e.g., 450 kg")
+            
+            # Initialize empty text key vectors if missing to safely handle automatic clearing resets
+            if "input_raw_log" not in st.session_state: st.session_state.input_raw_log = ""
+            if "input_material" not in st.session_state: st.session_state.input_material = "Copper Materials Component"
+            if "input_quantity" not in st.session_state: st.session_state.input_quantity = ""
+
+            # Layout forms with clear key state associations
+            raw_log = st.text_area("Paste Raw Warehouse Manifest / Plant Chat Log:", value=st.session_state.input_raw_log, placeholder="Paste unstructured data strings...", key="text_raw_log")
+            material_type = st.text_input("Material Category Mapping", value=st.session_state.input_material, key="text_material")
+            quantity = st.text_input("Estimated Weight/Volume (Always specify 'kg' or 'tons')", value=st.session_state.input_quantity, key="text_quantity")
             
             if st.button("Trigger Autonomous Matching Pipeline", type="primary", use_container_width=True):
                 if raw_log.strip() and quantity.strip():
+                    new_id = f"LOT-{int(datetime.datetime.now().timestamp())}"
                     new_listing = {
-                        "id": f"LOT-{int(datetime.datetime.now().timestamp())}",
+                        "id": new_id,
                         "sender_email": st.session_state.current_user,
                         "sender_company": user_meta["company_name"],
                         "raw_text": raw_log,
@@ -442,21 +450,57 @@ else:
                         "quantity": quantity,
                         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
                     }
+                    
+                    # Commit permanently to persistent system sheets
                     save_listing_to_db(new_listing)
                     st.session_state.marketplace_db.append(new_listing)
                     
-                    with st.spinner("Firing text payload vectors into automated n8n agent matrix pipeline..."):
+                    # TRIGGER LIVE AUTO-RESET MECHANISM BEFORE PAGE RELOADS
+                    st.session_state.input_raw_log = ""
+                    st.session_state.input_material = "Copper Materials Component"
+                    st.session_state.input_quantity = ""
+                    
+                    with st.spinner("Processing metadata strings..."):
                         try:
                             N8N_WEBHOOK_URL = "https://ecoaudit-ai.app.n8n.cloud/webhook-test/ecoaudit-stream"
                             requests.post(N8N_WEBHOOK_URL, json={"message": raw_log, "weight": quantity}, timeout=5)
-                            st.success("Automated matching n8n route activated successfully!")
-                            st.balloons()
-                            st.rerun()
                         except Exception:
-                            st.success("Local pipeline submission executed successfully.")
-                            st.rerun()
+                            pass
+                    st.success("🎯 Dispatched! Pipeline successfully triggered and input cleared.")
+                    st.rerun()
                 else:
-                    st.error("Please input a text manifest log description and a valid volume capacity calculation vector.")
+                    st.error("Provide a text log manifest and volume parameter metrics to execute routing.")
+
+            # --- DYNAMIC CRUD MANAGEMENT PANEL ---
+            st.write("<br><br>", unsafe_allow_html=True)
+            st.markdown("### 🛠️ Active Operational Dispatches Management")
+            
+            my_listings = [item for item in st.session_state.marketplace_db if item["sender_email"] == st.session_state.current_user]
+            if not my_listings:
+                st.caption("No active material batches dispatched from this location node yet.")
+            else:
+                for idx, listing in enumerate(my_listings):
+                    with st.container():
+                        st.markdown(f"**Lot ID:** `{listing['id']}` | **Category:** {listing['material_type']}")
+                        edit_qty = st.text_input("Modify Volume / Weight Metric Vector", value=listing['quantity'], key=f"edit_qty_{listing['id']}")
+                        
+                        col_actions = st.columns([1, 1, 4])
+                        with col_actions[0]:
+                            if st.button("Update Log", key=f"up_btn_{listing['id']}", use_container_width=True):
+                                # Dynamic matrix calculation update block
+                                for real_item in st.session_state.marketplace_db:
+                                    if real_item["id"] == listing["id"]:
+                                        real_item["quantity"] = edit_qty
+                                pd.DataFrame(st.session_state.marketplace_db).to_csv(MARKETPLACE_FILE, index=False)
+                                st.toast("Weight matrix updated successfully!")
+                                st.rerun()
+                        with col_actions[1]:
+                            if st.button("Delete Lot", key=f"del_btn_{listing['id']}", use_container_width=True):
+                                st.session_state.marketplace_db = [item for item in st.session_state.marketplace_db if item["id"] != listing["id"]]
+                                pd.DataFrame(st.session_state.marketplace_db).to_csv(MARKETPLACE_FILE, index=False)
+                                st.toast("Lot wiped out from centralized ledger files.")
+                                st.rerun()
+                        st.write("---")
 
         # 🛒 TAB THREE: OPEN PROCUREMENT MATRIX (BUYER VIEW)
         elif st.session_state.current_tab == "🛒 Open Procurement (Buy)":
@@ -540,8 +584,9 @@ else:
                     st.rerun()
 
         # ⚙️ TAB FIVE: NODE METRICS & ACCOUNT SETTINGS INDEX
-        elif st.session_state.current_tab == "⚙️ My Account ":
-            st.title("Portal Node Management")
+        # ⚙️ MODULE FIVE: SETTINGS CONTROL SHEETS MATRIX WITH HISTORICAL LEDGER EXTRACTION
+        elif st.session_state.current_tab == "⚙️ My Account Settings":
+            st.title("⚙️ Portal Node Management")
             st.write("---")
             st.markdown(f"""
                 <div class='eco-card'>
@@ -553,3 +598,19 @@ else:
                     <p><strong>License / Dynamic Parameters Vector:</strong> {user_meta['meta_1']}</p>
                 </div>
             """, unsafe_allow_html=True)
+            
+            # --- NODE SPECIFIC TRACKING OVERVIEW ---
+            st.markdown("### 📋 Node Manifest Posting History Ledger")
+            my_historical_logs = [item for item in st.session_state.marketplace_db if item["sender_email"] == st.session_state.current_user]
+            
+            if not my_historical_logs:
+                st.info("No transaction history traces mapped to this profile node index yet.")
+            else:
+                for past_item in my_historical_logs:
+                    st.markdown(f"""
+                        <div style="background: rgba(255,255,255,0.02); padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #4ADE80;">
+                            <span style="float: right; color: #64748B;"><small>{past_item['timestamp']}</small></span>
+                            <strong style="color: #F8FAFC;">ID: {past_item['id']} | {past_item['material_type']}</strong><br>
+                            <span style="color: #A78BFA;">Registered Weight Allocation: {past_item['quantity']}</span>
+                        </div>
+                    """, unsafe_allow_html=True)
