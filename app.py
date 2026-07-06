@@ -429,7 +429,7 @@ else:
                     st.success("🎯 Posted! Form cleared and market updated.")
                     st.rerun()
 
-        # --- MODULE THREE: SECURE LISTINGS CONTROL MATRIX ---
+        # --- MODULE THREE: SECURE LISTINGS CONTROL MATRIX --
         elif st.session_state.current_tab == "🛠️ Manage Posts":
             st.title("🛠️ Manage Your Active Listings")
             st.write("---")
