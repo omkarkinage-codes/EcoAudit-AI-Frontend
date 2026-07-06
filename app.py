@@ -5,17 +5,11 @@ import os
 import datetime
 import requests
 
-
 # --- BROWSER CONFIGURATION ---
 st.set_page_config(page_title="EcoAudit AI", page_icon="🌿", layout="wide")
 
-# 1. Define the variables first
 DB_FILE = "users_database.csv"
 MARKETPLACE_FILE = "marketplace_database.csv"
-
-# 2. TEMPORARY CLEANING LINES (Safe to run here!)
-if os.path.exists(DB_FILE): os.remove(DB_FILE)
-if os.path.exists(MARKETPLACE_FILE): os.remove(MARKETPLACE_FILE)
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
@@ -43,7 +37,6 @@ def load_users_db():
     return df.set_index("email").to_dict(orient="index")
 
 def save_user_to_db(email, data_dict):
-    # Saves the payload directly since it's already hashed in the signup form step
     df_new = pd.DataFrame([{
         "email": email,
         "password": data_dict["password"],
@@ -303,7 +296,6 @@ elif st.session_state.started and not st.session_state.logged_in:
 
                 if st.button("Complete Registration", type="primary", use_container_width=True):
                     if email.strip() and password.strip() and company_name.strip():
-                        # Hash password exactly ONCE during registry setup
                         user_payload = {
                             "password": hash_password(password.strip()),
                             "company_name": company_name.strip(),
@@ -329,9 +321,11 @@ elif st.session_state.started and not st.session_state.logged_in:
 else:
     user_meta = st.session_state.users_db[st.session_state.current_user]
 
+    # BUILD NAVIGATION TABS
     options = ["📊 Dashboard", "💬 Communication Terminal", "⚙️ My Account Settings"]
     if st.session_state.current_role == "Industrial Seller (Factory / Plant)":
         options.insert(1, "🚀 Dispatch Byproduct (Sell)")
+        options.insert(2, "🛠️ Manage Posts")  # NEW NAVIGATION ELEMENT INSERTION FOR SELLER DATA MODIFICATION
     else:
         options.insert(1, "🛒 Open Procurement (Buy)")
 
@@ -374,7 +368,6 @@ else:
         if st.session_state.current_tab == "📊 Dashboard":
             st.title("Executive Dashboard Overview")
             
-            # Real-time counter logic
             total_active_nodes = len(st.session_state.users_db)
             total_diverted_kg = 0.0
             for item in st.session_state.marketplace_db:
@@ -412,7 +405,6 @@ else:
                         
             with c_right:
                 st.markdown("### 🌐 Global Company Directory")
-                # FIX 3: RE-ENGINEERED DIRECT MESSAGING FROM DIRECTORY
                 has_other_companies = False
                 for user_email, profile in st.session_state.users_db.items():
                     if user_email != st.session_state.current_user:
@@ -424,7 +416,6 @@ else:
                             </div>
                         """, unsafe_allow_html=True)
                         
-                        # Clickable button interface to instantly start a peer-to-peer chat
                         if st.button(f"Connect & Message {profile['company_name']}", key=f"connect_{user_email[:5]}"):
                             chat_channel_id = f"DIRECT__{hashlib.md5((st.session_state.current_user + user_email).encode()).hexdigest()}"
                             if chat_channel_id not in st.session_state.private_chats:
@@ -446,7 +437,6 @@ else:
             st.title("🚀 Post New Byproduct Material")
             st.write("---")
             
-            # Simple UI boxes with clearing mechanisms
             raw_log = st.text_area("Paste Raw Warehouse Log / Factory Notes:", value=st.session_state.input_raw_log, placeholder="Type or paste material details here...", key="text_raw_log")
             material_type = st.text_input("Material Category Mapping", value=st.session_state.input_material, placeholder="e.g., Copper Cable Wire Scrap", key="text_material")
             quantity = st.text_input("Total Weight / Volume (Specify 'kg' or 'tons')", value=st.session_state.input_quantity, placeholder="e.g., 450 kg", key="text_quantity")
@@ -466,12 +456,10 @@ else:
                     save_listing_to_db(new_listing)
                     st.session_state.marketplace_db.append(new_listing)
                     
-                    # Empty out input fields instantly
                     st.session_state.input_raw_log = ""
                     st.session_state.input_material = ""
                     st.session_state.input_quantity = ""
                     
-                    # --- THE WEBHOOK CODE GOES RIGHT HERE ---
                     with st.spinner("Sending data to n8n automation workflow..."):
                         try:
                             N8N_WEBHOOK_URL = "https://ecoaudit-ai.app.n8n.cloud/webhook-test/d70c8a5d-55ca-4673-a2a8-fe4b26f9c23f"
@@ -482,25 +470,33 @@ else:
                                 "sender": st.session_state.current_user
                             }, timeout=5)
                         except Exception:
-                            pass # Keeps your app running even if your n8n server is offline
+                            pass
                             
                     st.success("🎯 Posted! The listing is now live and the form has been cleared.")
                     st.rerun()
                 else:
                     st.error("Please fill out all description and weight blocks to post your item.")
 
-            # FIX 2: RE-ENGINEERED DYNAMIC EDIT AND DELETE CONTROLS PANEL
-            st.write("<br><br>", unsafe_allow_html=True)
-            st.markdown("### 🛠️ Manage Your Active Listings")
+        # --- NEW SECTION MODULE TAB THREE: MANAGE POSTS CONTROLLER TOOLBOX ---
+        elif st.session_state.current_tab == "🛠️ Manage Posts":
+            st.title("🛠️ Manage Your Active Listings")
+            st.write("Update parameters or delete incorrect material log data entries here.")
+            st.write("---")
             
             my_listings = [item for item in st.session_state.marketplace_db if item["sender_email"] == st.session_state.current_user]
             if not my_listings:
-                st.caption("You have not uploaded any material logs yet.")
+                st.info("You have not uploaded any active market listings yet.")
             else:
                 for idx, listing in enumerate(my_listings):
                     with st.container():
-                        st.markdown(f"**Item ID:** `{listing['id']}` | **Category:** {listing['material_type']}")
-                        edit_qty = st.text_input("Modify Quantity / Weight Vector:", value=listing['quantity'], key=f"edit_qty_{listing['id']}")
+                        st.markdown(f"""
+                            <div style='background: rgba(255,255,255,0.02); padding: 15px; border-radius: 8px; margin-bottom: 5px; border-left: 4px solid #60A5FA;'>
+                                <strong style='font-size: 1.1rem; color: #FFFFFF;'>ID: {listing['id']} | Category: {listing['material_type']}</strong><br>
+                                <span style='color: #94A3B8;'>Original Text Manifest: "{listing['raw_text']}"</span>
+                            </div>
+                        """, unsafe_allow_html=True)
+                        
+                        edit_qty = st.text_input("Modify Quantity / Weight Parameter Value:", value=listing['quantity'], key=f"edit_qty_{listing['id']}")
                         
                         col_actions = st.columns([1, 1, 4])
                         with col_actions[0]:
@@ -509,17 +505,17 @@ else:
                                     if real_item["id"] == listing["id"]:
                                         real_item["quantity"] = edit_qty
                                 pd.DataFrame(st.session_state.marketplace_db).to_csv(MARKETPLACE_FILE, index=False)
-                                st.toast("Quantity updated successfully!")
+                                st.toast("Quantity tracking metric updated successfully!")
                                 st.rerun()
                         with col_actions[1]:
                             if st.button("Delete Post", key=f"del_btn_{listing['id']}", use_container_width=True):
                                 st.session_state.marketplace_db = [item for item in st.session_state.marketplace_db if item["id"] != listing["id"]]
                                 pd.DataFrame(st.session_state.marketplace_db).to_csv(MARKETPLACE_FILE, index=False)
-                                st.toast("Post successfully deleted from marketplace!")
+                                st.toast("Material post successfully deleted from the marketplace!")
                                 st.rerun()
-                        st.write("---")
+                        st.write("<br>", unsafe_allow_html=True)
 
-        # TAB THREE: PROCUREMENT WORKSPACE (BUYER VIEW)
+        # TAB FOUR: PROCUREMENT WORKSPACE (BUYER VIEW)
         elif st.session_state.current_tab == "🛒 Open Procurement (Buy)":
             st.title("🛒 Browse Active Byproduct Streams")
             st.write("---")
@@ -552,13 +548,12 @@ else:
                             st.session_state.current_tab = "💬 Communication Terminal"
                             st.rerun()
 
-        # TAB FOUR: CHAT WORKSPACE TERMINAL
+        # TAB FIVE: CHAT WORKSPACE TERMINAL
         elif st.session_state.current_tab == "💬 Communication Terminal":
             st.title("💬 Secure Negotiation Terminal")
             st.write("Private chat rooms securely locked away from other marketplace viewers.")
             st.write("---")
             
-            # Load active channels dynamically based on active users
             active_channels = []
             for ch_id, chat_history in st.session_state.private_chats.items():
                 if ch_id.startswith("DIRECT__") or any(item["sender_email"] == st.session_state.current_user for item in st.session_state.marketplace_db if f"{item['id']}__chat" == ch_id):
@@ -593,7 +588,7 @@ else:
                     })
                     st.rerun()
 
-        # TAB FIVE: ACCOUNT HISTORY CONTROLS
+        # TAB SIX: ACCOUNT HISTORY CONTROLS
         elif st.session_state.current_tab == "⚙️ My Account Settings":
             st.title("⚙️ Profile Management")
             st.write("---")
