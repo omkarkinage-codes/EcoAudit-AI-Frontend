@@ -1,9 +1,11 @@
 [theme]
-primaryColor = "#4ADE80"
-backgroundColor = "#0D1B2A"
-secondaryBackgroundColor = "#1E293B"
-textColor = "#E2E8F0"
+primaryColor = "#22C55E"
+backgroundColor = "#0D1117"
+secondaryBackgroundColor = "#161B22"
+textColor = "#C9D1D9"
 font = "sans serif"
 
-[client]
-showSidebarNavigation = false
+[server]
+headless = false
+enableCORS = false
+enableXsrfProtection = false

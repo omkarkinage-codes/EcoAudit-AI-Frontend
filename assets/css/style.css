@@ -1,0 +1,46 @@
+/* assets/css/style.css -------------------------------------------------
+   Feel free to extend – the important part is that the file exists so the
+   CSS injection in utils.load_css() can be loaded.
+----------------------------------------------------------------------- */
+
+/* Navbar */
+.navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: #0F172A;
+    padding: 0.8rem 2rem;
+}
+.navbar .logo { color:#22C55E; font-size:1.7rem; font-weight:700; }
+.navbar .links a {
+    color:#FFFFFF; margin:0 1rem; text-decoration:none; font-size:1rem;
+}
+.navbar .links a:hover { color:#22C55E; }
+
+/* Card grid containers */
+.metric-grid, .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+
+/* Individual card */
+.card {
+    background:#111827;
+    border:1px solid #1F2937;
+    border-radius:1.1rem;
+    padding:1.8rem;
+    text-align:center;
+    height:100%;
+}
+
+/* Footer */
+.footer {
+    background:#0F172A;
+    color:#CBD5E1;
+    text-align:center;
+    padding:2.5rem 0;
+    margin-top:3rem;
+}
+.footer h2 { color:#22C55E; margin-bottom:0.6rem; }
