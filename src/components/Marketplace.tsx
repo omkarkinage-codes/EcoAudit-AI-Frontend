@@ -5,22 +5,17 @@ import {
   Trash2, Upload, FileImage, Clipboard, CheckCircle2, 
   ArrowLeft, Info, HelpCircle, User, MessageSquare, Store, X
 } from "lucide-react";
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from '@supabase/supabase-js'
 
-let supabaseClient: any = null;
-
-function getSupabase() {
-  if (!supabaseClient) {
-    const supabaseUrl = (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_SUPABASE_URL) || (import.meta as any).env?.VITE_SUPABASE_URL || "";
-    const supabaseAnonKey = (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY) || (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || "";
-    
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error("Supabase environment variables NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are required but not defined.");
-    }
-    supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
-  }
-  return supabaseClient;
-}
+// Initialize Supabase Client securely using environment variables
+const supabase = createClient(
+  (typeof process !== "undefined" ? process.env?.NEXT_PUBLIC_SUPABASE_URL : undefined) || 
+    (import.meta as any).env?.VITE_SUPABASE_URL || 
+    "https://placeholder-url.supabase.co",
+  (typeof process !== "undefined" ? process.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY : undefined) || 
+    (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || 
+    "placeholder-key"
+);
 
 interface MarketplaceProps {
   user: { name: string; email: string; location: string; role: string };
@@ -153,7 +148,7 @@ export default function Marketplace({
 
     try {
       // Direct insertion statement into our 'listings' table on Supabase
-      const { data, error } = await getSupabase()
+      const { data, error } = await supabase
         .from('listings')
         .insert([
           { 
