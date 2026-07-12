@@ -3,8 +3,24 @@ import { Listing } from "../types";
 import { 
   Search, Filter, Plus, ShieldCheck, Recycle, MapPin, 
   Trash2, Upload, FileImage, Clipboard, CheckCircle2, 
-  ArrowLeft, Info, HelpCircle, User, MessageSquare, Store
+  ArrowLeft, Info, HelpCircle, User, MessageSquare, Store, X
 } from "lucide-react";
+import { createClient } from "@supabase/supabase-js";
+
+let supabaseClient: any = null;
+
+function getSupabase() {
+  if (!supabaseClient) {
+    const supabaseUrl = (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_SUPABASE_URL) || (import.meta as any).env?.VITE_SUPABASE_URL || "";
+    const supabaseAnonKey = (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY) || (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || "";
+    
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error("Supabase environment variables NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are required but not defined.");
+    }
+    supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+  }
+  return supabaseClient;
+}
 
 interface MarketplaceProps {
   user: { name: string; email: string; location: string; role: string };
@@ -26,6 +42,7 @@ export default function Marketplace({
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
 
   // Bidding states
   const [biddingListing, setBiddingListing] = useState<Listing | null>(null);
@@ -131,32 +148,40 @@ export default function Marketplace({
     if (!material || !quantity || !location) return;
 
     setIsSubmitting(true);
+    setErrorMsg("");
+    setSuccessMsg("");
 
     try {
-      // Submit listing to local state/listings board via primary secure pipeline
-      await onAddListing({
-        material,
-        quantity: parseFloat(quantity),
-        unit: "kg",
-        location: location,
-        category: category as any,
-        description,
-        base64Image: null,
-        seller: user.name,
-        sellerEmail: user.email
-      });
+      // Direct insertion statement into our 'listings' table on Supabase
+      const { data, error } = await getSupabase()
+        .from('listings')
+        .insert([
+          { 
+            material_name: material, 
+            quantity: parseFloat(quantity), 
+            location: location, 
+            category: category, 
+            description: description 
+          }
+        ]);
 
-      // Clear Form state
+      if (error) {
+        console.error("Supabase insert error:", error);
+        setErrorMsg(`Database Error: ${error.message || "Failed to submit listing to database."}`);
+        setTimeout(() => setErrorMsg(""), 6000);
+        return;
+      }
+
+      // If it succeeds, clear the form fields and trigger your existing green success alert banner.
       setMaterial("");
       setQuantity("");
       setDescription("");
       setIsFormOpen(false);
       
-      setSuccessMsg("Listing successfully created and securely transmitted!");
+      setSuccessMsg("Listing submitted successfully!");
       setTimeout(() => setSuccessMsg(""), 4000);
-    } catch (err) {
-      console.error("Failed to post listing securely:", err);
-      // Fallback message but with correct local state update
+
+      // Keep local client state in sync so the listing appears on the page board immediately
       try {
         await onAddListing({
           material,
@@ -169,16 +194,13 @@ export default function Marketplace({
           seller: user.name,
           sellerEmail: user.email
         });
-        setMaterial("");
-        setQuantity("");
-        setDescription("");
-        setIsFormOpen(false);
-        setSuccessMsg("Submitted listing! (Backend transmitted securely to local instance)");
-        setTimeout(() => setSuccessMsg(""), 4000);
-      } catch (innerErr) {
-        setSuccessMsg("Error submitting listing. Please try again.");
-        setTimeout(() => setSuccessMsg(""), 4000);
+      } catch (localErr) {
+        console.warn("Silent local state update warning:", localErr);
       }
+    } catch (err: any) {
+      console.error("Failed to post listing securely:", err);
+      setErrorMsg(`Connection Error: ${err.message || "An unexpected error occurred during submission."}`);
+      setTimeout(() => setErrorMsg(""), 6000);
     } finally {
       setIsSubmitting(false);
     }
@@ -187,6 +209,7 @@ export default function Marketplace({
   // Filter listings
   const filteredListings = listings.filter((l) => {
     const matchesSearch = l.material.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          l.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           l.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (l.seller && l.seller.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesCat = selectedCategory === "All" || l.category === selectedCategory;
@@ -228,6 +251,13 @@ export default function Marketplace({
         <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2 shadow-sm">
           <CheckCircle2 className="h-5 w-5 text-emerald-600" />
           {successMsg}
+        </div>
+      )}
+
+      {errorMsg && (
+        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center gap-2 shadow-sm">
+          <X className="h-5 w-5 text-rose-600" />
+          {errorMsg}
         </div>
       )}
 
@@ -346,7 +376,7 @@ export default function Marketplace({
               <Search className="absolute left-3.5 top-3.5 h-4.5 w-4.5 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search materials, locations, or sellers..."
+                placeholder="Filter materials by title or category in real-time..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full bg-white border border-slate-200 rounded-xl py-3 pl-11 pr-4 text-xs text-slate-800 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 shadow-sm font-medium"

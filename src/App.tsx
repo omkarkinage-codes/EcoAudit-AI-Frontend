@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { 
   Recycle, Store, MessageSquare, BarChart3, User, LogOut, 
   Terminal, ShieldCheck, CheckCircle2, ChevronRight, ChevronLeft,
-  Menu, X
+  Menu, X, Sun, Moon
 } from "lucide-react";
 import { motion } from "motion/react";
 
@@ -26,6 +26,26 @@ export default function App() {
     location: "",
     role: ""
   });
+
+  // Dark Mode switching engine
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    try {
+      return localStorage.getItem("theme") === "dark";
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (isDarkMode) {
+      root.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      root.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  }, [isDarkMode]);
 
   // Database listings and transactional state engines
   const [listings, setListings] = useState<Listing[]>([]);
@@ -300,6 +320,19 @@ export default function App() {
               )}
             </div>
             
+            {/* Theme Toggle button */}
+            <button
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer border border-slate-750 flex items-center justify-center"
+              title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            >
+              {isDarkMode ? (
+                <Sun className="h-4 w-4 text-amber-400" />
+              ) : (
+                <Moon className="h-4 w-4 text-blue-400" />
+              )}
+            </button>
+
             {/* Collapse/Expand toggle button */}
             <button
               onClick={() => setSidebarExpanded(!sidebarExpanded)}
@@ -459,13 +492,26 @@ export default function App() {
             </div>
             <span className="text-sm font-bold text-slate-900">EcoAudit AI</span>
           </div>
-          <button
-            onClick={() => setMobileSidebarOpen(true)}
-            className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
-            aria-label="Open Navigation Menu"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+              title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            >
+              {isDarkMode ? (
+                <Sun className="h-5 w-5 text-amber-500" />
+              ) : (
+                <Moon className="h-5 w-5 text-blue-500" />
+              )}
+            </button>
+            <button
+              onClick={() => setMobileSidebarOpen(true)}
+              className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+              aria-label="Open Navigation Menu"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+          </div>
         </div>
         {currentPage === "dashboard" && (
           <Dashboard 

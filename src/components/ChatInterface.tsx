@@ -55,10 +55,10 @@ export default function ChatInterface({
     }
   }, [preselectedSellerName, messages]);
 
-  // Scroll to bottom of active chat thread
+  // Scroll to bottom of active chat thread whenever a new message is added to the messages list
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [selectedThreadPartner, messages]);
+  }, [selectedThreadPartner, messages, messages.length]);
 
   // Handle AI analysis evaluation
   const handleAIEvaluation = async (e: React.FormEvent) => {
