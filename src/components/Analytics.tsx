@@ -43,17 +43,10 @@ export default function Analytics({ user, listings, stats, messages = [] }: Anal
         .filter((l) => l.date && l.date.split(" ")[0] === dateStr)
         .reduce((sum, l) => sum + (Number(l.quantity) || 0), 0);
       
-      // Provide realistic baseline seed data for beautiful visualizations so there are active days
-      let displayVolume = dayWeight;
-      if (displayVolume === 0) {
-        const seedValue = (d.getDate() * 23) % 450;
-        displayVolume = seedValue > 150 ? seedValue : 0; // consistent pattern based on date
-      }
-      
       data.push({
         date: dateStr,
         label,
-        volume: displayVolume,
+        volume: dayWeight,
       });
     }
     return data;
@@ -126,16 +119,14 @@ export default function Analytics({ user, listings, stats, messages = [] }: Anal
     const completedInteractedWeight = buyerInteractedListings
       .filter(l => l.status === "Completed")
       .reduce((sum, l) => sum + (Number(l.quantity) || 0), 0);
-    // Return the completed weight, or default to a realistic starting value of 1150 if no completed listings yet
-    return completedInteractedWeight > 0 ? completedInteractedWeight : 1150;
+    return completedInteractedWeight;
   }, [buyerInteractedListings]);
 
   // Card 2: Active Offers / Bids
   const activeBidsCount = React.useMemo(() => {
     // Count of Active listings with conversations
     const activeInteracted = buyerInteractedListings.filter(l => l.status === "Active" || l.status === "Pending").length;
-    // Return dynamic count or fallback to 2 representing ongoing trade board negotiations
-    return activeInteracted > 0 ? activeInteracted : 2;
+    return activeInteracted;
   }, [buyerInteractedListings]);
 
   // Card 3: CO2 Mitigation Impact
@@ -146,27 +137,21 @@ export default function Analytics({ user, listings, stats, messages = [] }: Anal
   // Tonnage Matrix breakdown for buyer
   const buyerBreakdown = React.useMemo(() => {
     const counts = {
-      Plastic: 500, // starting seed to represent sourced plastic
-      Metal: 250,   // starting seed to represent sourced metal
-      Paper: 400,   // starting seed to represent sourced paper
+      Plastic: 0,
+      Metal: 0,
+      Paper: 0,
       Glass: 0,
       "E-Waste": 0,
       Others: 0
     };
 
-    if (buyerInteractedListings.length > 0) {
-      // If we have actual user interactions, we clear the starting seed to show purely dynamic real-time data!
-      counts.Plastic = 0;
-      counts.Metal = 0;
-      counts.Paper = 0;
+    buyerInteractedListings.forEach(l => {
+      const cat = l.category || "Others";
+      if (cat in counts) {
+        counts[cat as keyof typeof counts] += Number(l.quantity) || 0;
+      }
+    });
 
-      buyerInteractedListings.forEach(l => {
-        const cat = l.category || "Others";
-        if (cat in counts) {
-          counts[cat as keyof typeof counts] += Number(l.quantity) || 0;
-        }
-      });
-    }
     return counts;
   }, [buyerInteractedListings]);
 
