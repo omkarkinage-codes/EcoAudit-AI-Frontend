@@ -292,7 +292,7 @@ export default function Home({ onLoginSuccess, onRegisterSuccess, listings = [] 
           <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/10 to-blue-500/10 rounded-3xl blur-3xl pointer-events-none" />
           <div className="relative rounded-3xl border border-slate-200 bg-white p-3 overflow-hidden shadow-2xl transition-all duration-300 hover:scale-[1.01]">
             <img 
-              src="/src/assets/images/ecoaudit_hero_banner_1783428187955.jpg" 
+              src="/ecoaudit_hero_banner_1783428187955.jpg" 
               alt="EcoAudit Circular Services Hub" 
               className="w-full h-auto rounded-2xl object-cover shadow-inner"
               referrerPolicy="no-referrer"
