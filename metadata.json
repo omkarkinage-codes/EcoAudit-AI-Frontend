@@ -1,0 +1,6 @@
+{
+  "name": "EcoAudit AI",
+  "description": "EcoAudit AI is an intelligent industrial waste marketplace and circular economy platform. Classified by Gemini AI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
