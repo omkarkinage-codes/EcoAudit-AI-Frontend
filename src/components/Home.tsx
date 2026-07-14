@@ -5,6 +5,11 @@ import { Listing } from "../types";
 import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase Client securely using environment variables
+console.log("Supabase URL Check:", {
+  processUrl: typeof process !== "undefined" ? process.env?.NEXT_PUBLIC_SUPABASE_URL : undefined,
+  metaUrl: (import.meta as any).env?.VITE_SUPABASE_URL
+});
+
 const supabase = createClient(
   (typeof process !== "undefined" ? process.env?.NEXT_PUBLIC_SUPABASE_URL : undefined) || 
     (import.meta as any).env?.VITE_SUPABASE_URL || 
