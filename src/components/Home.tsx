@@ -2,6 +2,17 @@ import React, { useState } from "react";
 import { Leaf, Recycle, ShieldCheck, Zap, Mail, MapPin, Building, Lock, ArrowRight, UserPlus, LogIn, ChevronRight, Menu, X } from "lucide-react";
 import { motion } from "motion/react";
 import { Listing } from "../types";
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase Client securely using environment variables
+const supabase = createClient(
+  (typeof process !== "undefined" ? process.env?.NEXT_PUBLIC_SUPABASE_URL : undefined) || 
+    (import.meta as any).env?.VITE_SUPABASE_URL || 
+    "https://placeholder-url.supabase.co",
+  (typeof process !== "undefined" ? process.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY : undefined) || 
+    (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || 
+    "placeholder-key"
+);
 
 interface HomeProps {
   onLoginSuccess: (user: { name: string; email: string; location: string; role: string }) => void;
@@ -58,32 +69,43 @@ export default function Home({ onLoginSuccess, onRegisterSuccess, listings = [] 
     setErrorMsg("");
     
     try {
-      const response = await fetch("http://localhost:3000/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: loginEmail,
-          password: loginPassword
-        })
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password: loginPassword,
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      if (error) {
+        setErrorMsg(error.message || "Authentication failed");
+        setLoading(false);
+        return;
+      }
+
+      if (data?.user) {
+        // Fetch custom metadata from public 'profiles' table
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('company_name, operational_hub, entity_role')
+          .eq('id', data.user.id)
+          .single();
+
+        if (profileError) {
+          console.error("Profile fetching error:", profileError);
+        }
+
         onLoginSuccess({
-          name: data.company.name,
-          email: data.company.email,
-          location: data.company.location,
-          role: data.company.type
+          name: profile?.company_name || data.user.email?.split('@')[0] || "Enterprise",
+          email: data.user.email || loginEmail,
+          location: profile?.operational_hub || "Global",
+          role: profile?.entity_role || "Seller"
         });
         setLoading(false);
         setIsLoginModalOpen(false);
       } else {
-        const errData = await response.json();
-        setErrorMsg(errData.error || "Authentication failed");
+        setErrorMsg("Authentication failed");
         setLoading(false);
       }
-    } catch (err) {
-      setErrorMsg("Failed to communicate with authentication server");
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to communicate with authentication server");
       setLoading(false);
     }
   };
@@ -99,47 +121,60 @@ export default function Home({ onLoginSuccess, onRegisterSuccess, listings = [] 
     setRegisterSuccessMsg("");
 
     try {
-      const response = await fetch("http://localhost:3000/api/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          company_name: regCompany,
-          email: regEmail,
-          operational_hub: regLocation || "Global",
-          entity_role: regType,
-          secure_password: regPassword
-        })
+      // Step A: Create the auth user account
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: regEmail,
+        password: regPassword,
       });
 
-      if (response.ok) {
-        setRegisterSuccessMsg("Enterprise registration successfully submitted!");
-        
-        onRegisterSuccess({
+      if (authError) {
+        setErrorMsg(authError.message || "Registration failed");
+        setLoading(false);
+        return;
+      }
+
+      // Step B: If account creation succeeds, insert company details into profiles table
+      if (authData?.user) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              id: authData.user.id, // Matches the foreign key uuid we set up
+              company_name: regCompany,
+              operational_hub: regLocation || "Global",
+              entity_role: regType
+            }
+          ]);
+
+        if (profileError) {
+          console.error("Profile creation error:", profileError);
+        }
+      }
+
+      setRegisterSuccessMsg("Enterprise registration successfully submitted!");
+      
+      onRegisterSuccess({
+        name: regCompany,
+        email: regEmail,
+        location: regLocation,
+        type: regType
+      });
+
+      // Delay the login success redirect to let the user see the success message
+      setTimeout(() => {
+        onLoginSuccess({
           name: regCompany,
           email: regEmail,
-          location: regLocation,
-          type: regType
+          location: regLocation || "Global",
+          role: regType
         });
-
-        // Delay the login success redirect to let the user see the success message
-        setTimeout(() => {
-          onLoginSuccess({
-            name: regCompany,
-            email: regEmail,
-            location: regLocation || "Global",
-            role: regType
-          });
-          setLoading(false);
-          setRegisterSuccessMsg("");
-          setIsLoginModalOpen(false);
-        }, 1500);
-      } else {
-        const errData = await response.json();
-        setErrorMsg(errData.error || "Registration failed");
         setLoading(false);
-      }
-    } catch (err) {
-      setErrorMsg("Failed to communicate with authorization server");
+        setRegisterSuccessMsg("");
+        setIsLoginModalOpen(false);
+      }, 1500);
+
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to communicate with authorization server");
       setLoading(false);
     }
   };
