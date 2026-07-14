@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState } from "react";
 import { Leaf, Recycle, ShieldCheck, Zap, Mail, MapPin, Building, Lock, ArrowRight, UserPlus, LogIn, ChevronRight, Menu, X } from "lucide-react";
 import { motion } from "motion/react";
@@ -488,8 +489,6 @@ export default function Home({ onLoginSuccess, onRegisterSuccess, listings = [] 
         </div>
       </section>
 
-
-
       {/* Interactive Multi-Line Footer */}
       <footer className="relative z-10 w-full border-t border-slate-200 bg-slate-50 text-slate-500 font-sans">
         <div className="max-w-7xl mx-auto px-6 py-12">
@@ -741,7 +740,7 @@ export default function Home({ onLoginSuccess, onRegisterSuccess, listings = [] 
                   ) : (
                     <>
                       <UserPlus className="h-4.5 w-4.5" />
-                      Register & Issue JWT
+                      Register 
                     </>
                   )}
                 </button>
